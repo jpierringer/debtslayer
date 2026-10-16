@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Debt Slayer">
+<meta name="theme-color" content="#140f33">
+<title>Debt Slayer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%94%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="touchicon" href="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#140f33; --bg2:#1d1650; --card:#221a5c; --card2:#2d2375; --line:#43369a;
+  --txt:#f7f4ff; --mut:#b4abee;
+  --coin:#ffc933; --hot:#ff5a7a; --mint:#3df0b0; --sky:#58c8ff; --violet:#a266ff; --flame:#ff8a3d;
+  --display:'Bungee','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+  --body:'Nunito',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(900px 500px at 85% -10%,#5b2ea866,transparent 60%),radial-gradient(700px 500px at -10% 30%,#ff5a7a2e,transparent 60%);
+  background-attachment:fixed;
+  color:var(--txt);font-family:var(--body);font-weight:700;min-height:100vh;min-height:100dvh;
+  -webkit-font-smoothing:antialiased;overscroll-behavior-y:none;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:var(--txt)}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:400;letter-spacing:.2px}
+.wrap{max-width:520px;margin:0 auto;padding:14px 14px calc(104px + env(safe-area-inset-bottom))}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:#140f33dd;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding-top:env(safe-area-inset-top);border-bottom:1px solid var(--line)}
+.topin{max-width:520px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.av{width:46px;height:46px;border-radius:16px;background:linear-gradient(140deg,var(--violet),var(--hot));display:grid;place-items:center;font-size:26px;flex:none;box-shadow:0 3px 0 #0006}
+.who{flex:1;min-width:0}
+.nm{font-family:var(--display);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:12px;color:var(--mut);margin-top:1px}
+.xpbar{height:9px;background:#0007;border-radius:99px;overflow:hidden;margin-top:5px}
+.xpfill{height:100%;background:linear-gradient(90deg,var(--sky),var(--mint));border-radius:99px;transition:width 1s cubic-bezier(.2,.9,.3,1)}
+.pill{background:#ffffff1a;border-radius:99px;padding:7px 11px;font-size:15px;white-space:nowrap}
+.pill.fire{color:var(--coin)}
+
+/* cards */
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:2px solid var(--line);border-radius:22px;padding:16px;margin-bottom:14px;position:relative}
+.card h3{font-size:15px;margin-bottom:10px}
+.lab{font-size:13px;color:var(--mut)}
+.big{font-family:var(--display);font-size:30px;line-height:1.1}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mint{color:var(--mint)}.coin{color:var(--coin)}.hot{color:var(--hot)}.sky{color:var(--sky)}
+
+.bar{height:14px;background:#0008;border-radius:99px;overflow:hidden;margin-top:10px}
+.bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mint),var(--sky));transition:width .9s cubic-bezier(.2,.9,.3,1)}
+.bar.gold>i{background:linear-gradient(90deg,var(--coin),var(--flame))}
+
+/* boss chips */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:99px;background:var(--card);border:2px solid var(--line);font-size:14px;max-width:190px}
+.chip span.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.sel{border-color:var(--coin);background:var(--card2);box-shadow:0 0 0 3px #ffc93333}
+.chip.add{border-style:dashed;color:var(--mut)}
+.chip.dead{opacity:.55}
+
+/* boss */
+.edit{position:absolute;top:10px;right:10px;width:38px;height:38px;border-radius:12px;background:#ffffff17;font-size:17px}
+.stage{position:relative;display:grid;place-items:center;padding:12px 0 4px;min-height:150px}
+.stage:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,#ff5a7a55,transparent 68%);top:50%;left:50%;transform:translate(-50%,-50%)}
+.boss{position:relative;font-size:112px;line-height:1;filter:drop-shadow(0 10px 18px #0009);animation:bob 3.2s ease-in-out infinite;user-select:none}
+.boss.p3{animation-duration:1.6s}
+.boss.p4{animation:jitter .35s linear infinite;filter:drop-shadow(0 10px 18px #0009) saturate(.7)}
+.boss.dead{animation:none;filter:grayscale(1) drop-shadow(0 6px 10px #000a);opacity:.8}
+.boss.shake{animation:shake .55s}
+@keyframes bob{50%{transform:translateY(-9px) rotate(-3deg)}}
+@keyframes jitter{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px) rotate(-1deg)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,-2px) rotate(1deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-20px) rotate(-10deg) scale(.92)}35%{transform:translateX(16px) rotate(8deg)}55%{transform:translateX(-11px) rotate(-4deg)}75%{transform:translateX(7px)}}
+.dmg{position:absolute;top:22%;left:50%;font-family:var(--display);font-size:34px;color:var(--coin);text-shadow:0 3px 0 #a3002c,0 0 22px #ff5a7a;animation:rise 1.3s forwards;pointer-events:none;white-space:nowrap;z-index:5}
+.dmg.crit{font-size:46px;color:#fff;text-shadow:0 3px 0 #ff5a7a,0 0 26px #ffc933}
+@keyframes rise{0%{opacity:0;transform:translate(-50%,24px) scale(.4)}15%{opacity:1;transform:translate(-50%,0) scale(1.35)}100%{opacity:0;transform:translate(-50%,-100px) scale(1)}}
+.bname{text-align:center;font-family:var(--display);font-size:20px;margin:4px 0 2px}
+.taunt{text-align:center;color:var(--mut);font-size:14px;min-height:20px;margin-bottom:12px}
+.hp{height:30px;background:#000b;border-radius:99px;border:3px solid #000;overflow:hidden;position:relative}
+.hpfill{height:100%;background:linear-gradient(90deg,#ff2f5a,var(--flame));border-radius:99px;transition:width 1.1s cubic-bezier(.2,.9,.3,1);box-shadow:inset 0 -6px 0 #0003}
+.hptxt{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:13px;text-shadow:0 2px 3px #000}
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.tri div{background:#0004;border-radius:14px;padding:9px 6px;text-align:center}
+.tri b{display:block;font-family:var(--display);font-size:15px;font-weight:400;margin-top:3px}
+.regen{margin-top:10px;font-size:13px;color:var(--hot);text-align:center}
+
+.attack{display:block;width:100%;padding:18px;border-radius:22px;font-family:var(--display);font-size:26px;color:#2b0016;background:linear-gradient(180deg,#ffe066,var(--coin) 55%,var(--flame));box-shadow:0 6px 0 #a3480f,0 12px 26px #ff8a3d55;margin-bottom:16px;animation:pulse 2s ease-in-out infinite;transition:transform .08s}
+.attack:active{transform:translateY(5px);box-shadow:0 1px 0 #a3480f}
+@keyframes pulse{50%{box-shadow:0 6px 0 #a3480f,0 12px 38px #ffc933aa}}
+
+.quest .row b{font-family:var(--display);font-weight:400;font-size:14px}
+.done{color:var(--mint)}
+.log{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #ffffff14}
+.log:first-of-type{border-top:0}
+.log .e{font-size:26px}
+.log .m{flex:1;min-width:0}
+.log .m small{display:block;color:var(--mut);font-weight:700;font-size:12px}
+.log .a{font-family:var(--display);font-size:15px;color:var(--coin)}
+.log .x{font-size:12px;color:var(--sky);text-align:right}
+.mini{width:34px;height:34px;border-radius:10px;background:#ffffff14;font-size:15px}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#140f33f2;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);padding:6px 8px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:14px;font-size:12px;color:var(--mut)}
+nav button .i{font-size:24px;filter:grayscale(.7);transition:transform .15s}
+nav button.on{color:var(--coin)}
+nav button.on .i{filter:none;transform:translateY(-3px) scale(1.15)}
+
+/* forms */
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 6px}
+input[type=text],input[type=date],input[type=email],input[type=password]{width:100%;background:#0006;border:2px solid var(--line);border-radius:14px;padding:13px 14px;font-size:17px;outline:none}
+input:focus{border-color:var(--sky)}
+textarea{width:100%;min-height:150px;background:#0006;border:2px solid var(--line);border-radius:14px;padding:12px;color:var(--txt);font:600 13px/1.4 ui-monospace,Menlo,monospace}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:10px;color:var(--txt);font-size:14px;margin-top:14px}
+.chk input{width:22px;height:22px;accent-color:var(--mint)}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pk{width:52px;height:52px;border-radius:16px;background:#0005;border:2px solid var(--line);font-size:28px}
+.pk.sel{border-color:var(--coin);background:var(--card2);box-shadow:0 0 0 3px #ffc93344}
+.btn{display:block;width:100%;padding:15px;border-radius:16px;font-family:var(--display);font-size:17px;text-align:center;background:linear-gradient(180deg,var(--violet),#7a3df0);box-shadow:0 5px 0 #3d1b99;margin-top:16px}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #3d1b99}
+.btn.gold{color:#2b0016;background:linear-gradient(180deg,#ffe066,var(--coin) 60%,var(--flame));box-shadow:0 5px 0 #a3480f}
+.btn.gold:active{box-shadow:0 1px 0 #a3480f}
+.btn.ghost{background:#ffffff14;box-shadow:none;font-family:var(--body);font-size:15px}
+.btn.danger{background:#ff2f5a33;box-shadow:none;color:#ff9db0;font-family:var(--body);font-size:15px}
+.qrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.q{padding:10px 14px;border-radius:99px;background:#ffffff1a;font-size:15px;border:2px solid transparent}
+.q:active{transform:scale(.94)}
+.q.fin{background:#ff5a7a33;color:#ffb0c0}
+.amt{font-family:var(--display)!important;font-size:34px!important;text-align:center;color:var(--coin)!important}
+.prev{margin-top:12px;padding:12px;border-radius:14px;background:#0005;font-size:14px;min-height:46px;text-align:center}
+
+/* sheet */
+.sheetwrap{position:fixed;inset:0;z-index:60;background:#000a;display:none;align-items:flex-end;justify-content:center}
+.sheetwrap.on{display:flex}
+.sheet{width:100%;max-width:520px;max-height:92vh;max-height:92dvh;overflow:auto;background:linear-gradient(180deg,var(--card2),var(--bg2));border-radius:28px 28px 0 0;border-top:3px solid var(--coin);padding:10px 18px calc(24px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.9,.3,1)}
+@keyframes up{from{transform:translateY(60%);opacity:.4}}
+.grab{width:46px;height:5px;border-radius:9px;background:#ffffff44;margin:4px auto 14px}
+.sheet h2{font-size:20px;margin-bottom:4px}
+
+/* trophies */
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bd{background:#0004;border:2px solid var(--line);border-radius:18px;padding:12px 6px;text-align:center;min-height:118px}
+.bd .e{font-size:38px}
+.bd b{display:block;font-size:12px;margin-top:4px;line-height:1.15}
+.bd small{display:block;font-size:11px;color:var(--mut);margin-top:3px;line-height:1.2;font-weight:700}
+.bd.got{border-color:var(--coin);background:linear-gradient(180deg,#ffc9331f,#0004)}
+.bd.lock .e{filter:grayscale(1);opacity:.35}
+.bd.lock b{color:var(--mut)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stats div{background:#0004;border-radius:16px;padding:12px}
+.stats b{display:block;font-family:var(--display);font-weight:400;font-size:19px;margin-top:3px}
+
+/* plan */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:99px;background:#0008;outline:none;margin:14px 0 4px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:34px;height:34px;border-radius:50%;background:var(--coin);border:4px solid #fff;box-shadow:0 3px 8px #0008}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--coin);border:4px solid #fff}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vs>div{background:#0004;border-radius:16px;padding:12px;text-align:center}
+.vs>div.win{border:2px solid var(--mint);background:#3df0b017}
+.vs b{display:block;font-family:var(--display);font-weight:400;font-size:18px;margin:4px 0}
+.save{margin-top:12px;text-align:center;font-size:15px;color:var(--mint)}
+.note{font-size:12px;color:var(--mut);margin-top:10px;line-height:1.4;font-weight:600}
+
+/* team */
+.mate{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-top:1px solid #ffffff14}
+.mate:first-of-type{border-top:0}
+.mate.me{background:linear-gradient(90deg,#ffc9331f,transparent);margin:0 -8px;padding:12px 8px;border-radius:14px}
+.mate .rank{width:26px;text-align:center;font-family:var(--display);font-size:18px;padding-top:10px;flex:none}
+.av.sm{width:42px;height:42px;font-size:23px;border-radius:14px}
+.mm{flex:1;min-width:0}
+.code{font-family:var(--display);font-size:24px;letter-spacing:3px;color:var(--coin);margin-top:2px}
+.hpm{height:9px;background:#000a;border-radius:99px;overflow:hidden;margin-top:6px}
+.hpm i{display:block;height:100%;background:linear-gradient(90deg,#ff2f5a,var(--flame));border-radius:99px}
+.ach{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #ffffff14}
+.ach:first-of-type{border-top:0}
+.ach .e{font-size:30px;width:36px;text-align:center;flex:none}
+.ach.lock .e{filter:grayscale(1);opacity:.4}
+.ach .am{flex:1;min-width:0}
+.ach .am b{display:block;font-size:14px}
+.ach .am small{display:block;color:var(--mut);font-size:11px;font-weight:700;line-height:1.2}
+.dots{display:flex;gap:4px;flex:none}
+.dot{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:17px;background:#0005;filter:grayscale(1);opacity:.28}
+.dot.on{background:#ffc93333;filter:none;opacity:1;box-shadow:0 0 0 2px var(--coin)}
+.tomb{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #ffffff14}
+.tomb:first-of-type{border-top:0}
+.stone{width:54px;height:62px;border-radius:27px 27px 8px 8px;background:linear-gradient(180deg,#9a95c4,#5b5683);display:grid;place-items:center;font-size:28px;flex:none;box-shadow:inset 0 -6px 0 #0003}
+.stone span{filter:grayscale(1);opacity:.75}
+.tomb .m{flex:1;min-width:0}
+.tomb .m small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.tomb .a{font-family:var(--display);font-size:14px;color:var(--mint)}
+/* overlays */
+.celeb{position:fixed;inset:0;z-index:100;background:#000c;display:none;place-items:center;padding:22px}
+.celeb.on{display:grid}
+.cc{background:linear-gradient(160deg,#3a2c9e,var(--bg2));border:3px solid var(--coin);border-radius:28px;padding:28px 22px 22px;text-align:center;max-width:380px;width:100%;animation:pop .55s cubic-bezier(.2,1.6,.4,1);box-shadow:0 0 60px #ffc93355}
+.cc .ce{font-size:88px;line-height:1.1;animation:spinpop .8s cubic-bezier(.2,1.6,.4,1)}
+.cc .ct{font-family:var(--display);font-size:26px;color:var(--coin);margin:8px 0 6px;line-height:1.1}
+.cc p{margin:0 0 4px;color:var(--txt);font-size:16px;line-height:1.35}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+@keyframes spinpop{from{transform:scale(0) rotate(-200deg)}}
+#toast{position:fixed;left:50%;top:calc(76px + env(safe-area-inset-top));transform:translate(-50%,-20px);z-index:90;background:var(--coin);color:#2b0016;padding:10px 18px;border-radius:99px;font-family:var(--display);font-size:14px;opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis;box-shadow:0 6px 0 #a3480f}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#flash{position:fixed;inset:0;z-index:85;pointer-events:none;background:radial-gradient(circle,#fff8,#ff2f5a99);opacity:0}
+#flash.on{animation:fl .4s}
+@keyframes fl{0%{opacity:.9}100%{opacity:0}}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:120;pointer-events:none}
+
+/* welcome */
+.welcome{text-align:center}
+.welcome .logo{font-size:76px;margin-top:20px;animation:bob 3s ease-in-out infinite}
+.welcome h1{font-size:42px;line-height:1;margin:8px 0 10px;color:var(--coin);text-shadow:0 4px 0 #a3480f}
+.welcome p{color:var(--mut);margin:0 auto 6px;max-width:340px;line-height:1.45}
+.welcome .card{text-align:left;margin-top:20px}
+.vic{text-align:center;background:linear-gradient(160deg,#3a2c9e,#7a3df0);border-color:var(--coin)}
+.vic .big{color:var(--coin)}
+.vic .e{font-size:70px}
+.empty{text-align:center;color:var(--mut);padding:10px;font-size:14px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="sheetwrap" id="sheet"></div>
+<div class="celeb" id="celeb"></div>
+<div id="toast"></div>
+<div id="flash"></div>
+<canvas id="fx"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(()=>{
+'use strict';
+/* ---------- team play config ----------
+   Paste your Supabase project URL and anon (public) key between the quotes.
+   Leave both empty to play solo. */
+const SUPABASE_URL='';
+const SUPABASE_ANON_KEY='';
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const KEY='debtslayer.v1';
+const AVATARS=['🦸','🥷','🧙','🦊','🐼','🦁','🤖','👑','🐲','🚀','🧑‍🎓','⚡'];
+const BOSSES=['👹','👾','🐉','🧟','🦖','🕷️','👻','🤡','🦑','🧛','🐙','😈'];
+const TITLES=['Debt rookie','Coin collector','Bill basher','Loan fighter','Interest crusher','Balance breaker','Debt destroyer','Money ninja','Freedom knight','Debt slayer','Legend of zero'];
+const TAUNT=[
+ ["Ha! You'll be paying me forever.","Is that all you've got?","I'm not going anywhere."],
+ ["Ouch! Lucky hit...","Hey! That actually hurt!","Okay, now I'm annoyed."],
+ ["I'm sweating... are you serious?","Please, have mercy!","You're getting scary good."],
+ ["NO! Not like this!","I'm melting... MELTING!","Just one more hit and I'm done..."]
+];
+const PHASE={.75:['🔥','25% down!','The boss is rattled. Keep swinging.'],.5:['⚔️','Halfway there!','Half of this boss is gone. Nothing can stop you now.'],.25:['😱','Boss is begging!','Only 25% left. Smell the victory.'],.1:['💀','Almost dead!','Under 10% left. One big hit could end it.']};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2=n=>Math.round(n*100)/100;
+const num=s=>{const v=parseFloat(String(s==null?'':s).replace(/[^0-9.]/g,''));return isFinite(v)?v:0};
+const money=n=>'$'+(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0=n=>'$'+Math.round(n||0).toLocaleString('en-US');
+const mon=n=>Math.abs(n-Math.round(n))<0.005?money0(n):money(n);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const pad=n=>String(n).padStart(2,'0');
+const ymd=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const dayNum=s=>{const [y,m,d]=s.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5)};
+const mk=d=>d.getFullYear()+'-'+pad(d.getMonth()+1);
+const sum=(a,f)=>a.reduce((t,x)=>t+(f?f(x):x),0);
+const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+const lvl=xp=>Math.floor(Math.sqrt(xp/60))+1;
+const lvlStart=L=>60*(L-1)*(L-1);
+const title=L=>TITLES[Math.min(TITLES.length-1,Math.floor((L-1)/2))];
+const pctXP=xp=>{const L=lvl(xp);return Math.max(0,Math.min(100,(xp-lvlStart(L))/(lvlStart(L+1)-lvlStart(L))*100))};
+const fmtDate=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric'})};
+const dur=m=>{const y=Math.floor(m/12),mo=m%12;return (y?y+(y>1?' yrs':' yr')+(mo?' ':''):'')+(mo||!y?mo+(mo===1?' mo':' mos'):'')};
+const when=m=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+m);return d.toLocaleDateString('en-US',{month:'short',year:'numeric'})};
+
+/* ---------- state ---------- */
+let S=null,tab='battle',anim=null,planExtra=0,formBoss=BOSSES[0],formAv=AVATARS[0];
+let sb=null;
+const TM={user:null,party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false,loading:false,err:'',ch:null};
+try{S=JSON.parse(localStorage.getItem(KEY))||null}catch(e){S=null}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(sb&&TM.user)syncSoon()};
+const cur=()=>S.loans.find(l=>l.id===S.sel)||S.loans.find(l=>!l.slain)||S.loans[0];
+const hp=l=>l.slain?0:Math.max(0,Math.min(1,l.balance/Math.max(1,l.original+(l.interest||0))));
+
+/* ---------- interest regen ---------- */
+function accrue(){
+  const out=[];const t=dayNum(ymd());
+  S.loans.forEach(l=>{
+    if(l.slain||!l.track||!(l.apr>0)){l.lastAccrual=ymd();return}
+    const d=t-dayNum(l.lastAccrual);
+    if(d>0){
+      const add=r2(l.balance*l.apr/100/365*d);
+      l.balance=r2(l.balance+add);l.interest=r2((l.interest||0)+add);l.lastAccrual=ymd();
+      if(add>0)out.push(add);
+    }
+  });
+  if(out.length)save();
+  return out;
+}
+
+/* ---------- projections ---------- */
+function sim(B,apr,P){
+  const r=apr/1200;let bal=B,m=0,ti=0;
+  if(B<=0)return{m:0,ti:0};
+  if(P<=0||(r>0&&P<=bal*r+0.005))return{inf:true};
+  while(bal>0.005&&m<1200){const i=bal*r;ti+=i;bal+=i;bal-=Math.min(P,bal);m++}
+  return m>=1200?{inf:true}:{m,ti:r2(ti)};
+}
+
+/* ---------- stats, streak, badges ---------- */
+function streak(){
+  if(!S.payments.length)return 0;
+  const set=new Set(S.payments.map(p=>p.date.slice(0,7)));
+  const d=new Date();d.setDate(1);let k=mk(d);
+  if(!set.has(k)){d.setMonth(d.getMonth()-1);k=mk(d)}
+  let n=0;while(set.has(k)){n++;d.setMonth(d.getMonth()-1);k=mk(d)}
+  return n;
+}
+function stats(){
+  const pays=S.payments;
+  const base=sum(S.loans,l=>l.original+(l.interest||0));
+  const bal=sum(S.loans,l=>l.slain?0:l.balance);
+  return{
+    totalPaid:r2(sum(pays,p=>p.amt)),count:pays.length,
+    max:pays.reduce((m,p)=>Math.max(m,p.amt),0),
+    streak:streak(),crit:pays.filter(p=>p.crit).length,
+    prog:base>0?Math.max(0,Math.min(1,1-bal/base)):0,
+    slain:S.loans.filter(l=>l.slain).length,
+    free:S.loans.length>0&&S.loans.every(l=>l.slain),
+    bal,base
+  };
+}
+const BADGES=[
+ {id:'first',e:'🗡️',n:'First blood',d:'Make your first payment',t:s=>s.count>=1},
+ {id:'crit',e:'💥',n:'Critical hit',d:'Pay more than the monthly minimum',t:s=>s.crit>=1},
+ {id:'h100',e:'🔨',n:'Heavy hitter',d:'One payment of $100 or more',t:s=>s.max>=100},
+ {id:'h500',e:'☄️',n:'Meteor strike',d:'One payment of $500 or more',t:s=>s.max>=500},
+ {id:'h1k',e:'☢️',n:'Nuclear option',d:'One payment of $1,000 or more',t:s=>s.max>=1000},
+ {id:'s3',e:'🔥',n:'On fire',d:'Pay 3 months in a row',t:s=>s.streak>=3},
+ {id:'s6',e:'🌋',n:'Unstoppable',d:'Pay 6 months in a row',t:s=>s.streak>=6},
+ {id:'s12',e:'👑',n:'Year of power',d:'Pay 12 months in a row',t:s=>s.streak>=12},
+ {id:'c10',e:'⛏️',n:'Grinder',d:'Make 10 payments',t:s=>s.count>=10},
+ {id:'c25',e:'🤖',n:'Payment machine',d:'Make 25 payments',t:s=>s.count>=25},
+ {id:'p10',e:'🥉',n:'10% down',d:'Wipe out 10% of your debt',t:s=>s.prog>=.10},
+ {id:'p25',e:'🥈',n:'Quarter down',d:'Wipe out 25% of your debt',t:s=>s.prog>=.25},
+ {id:'p50',e:'🥇',n:'Halfway hero',d:'Wipe out 50% of your debt',t:s=>s.prog>=.50},
+ {id:'p75',e:'💎',n:'Final stretch',d:'Wipe out 75% of your debt',t:s=>s.prog>=.75},
+ {id:'p90',e:'🚀',n:'Almost free',d:'Wipe out 90% of your debt',t:s=>s.prog>=.90},
+ {id:'t1k',e:'💵',n:'$1K club',d:'Pay $1,000 total',t:s=>s.totalPaid>=1000},
+ {id:'t5k',e:'💰',n:'$5K club',d:'Pay $5,000 total',t:s=>s.totalPaid>=5000},
+ {id:'t10k',e:'🏦',n:'$10K club',d:'Pay $10,000 total',t:s=>s.totalPaid>=10000},
+ {id:'t25k',e:'🤑',n:'$25K club',d:'Pay $25,000 total',t:s=>s.totalPaid>=25000},
+ {id:'slay',e:'🏆',n:'Boss slayer',d:'Defeat a loan completely',t:s=>s.slain>=1},
+ {id:'free',e:'🎉',n:'Debt-free legend',d:'Defeat every loan',t:s=>s.free}
+];
+
+/* ---------- sound ---------- */
+let AC=null;
+function actx(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function tone(f,t0,d,type='square',v=.1,slide){
+  const a=actx();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;
+  o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+d);
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.03);
+}
+const SND={
+  tap(){tone(660,0,.05,'square',.04)},
+  hit(){tone(220,0,.2,'sawtooth',.16,45);tone(110,0,.22,'square',.1,40)},
+  coin(){tone(988,0,.08);tone(1319,.08,.28)},
+  crit(){SND.hit();[523,659,784,1047].forEach((f,i)=>tone(f,.1+i*.09,.12))},
+  level(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,i*.09,.2,'triangle',.15))},
+  badge(){tone(784,0,.1,'triangle',.14);tone(1175,.1,.35,'triangle',.14)},
+  win(){[523,523,523,659,784,659,784,1047,1319,1568].forEach((f,i)=>tone(f,i*.11,.24,'square',.1))}
+};
+const snd=n=>{if(S&&S.sound!==false){try{SND[n]()}catch(e){}}};
+
+/* ---------- confetti ---------- */
+const cv=$('#fx'),cx=cv.getContext('2d');let PS=[],raf=0;
+const COLORS=['#ffc933','#ff5a7a','#3df0b0','#58c8ff','#a266ff','#ff8a3d','#ffffff'];
+function sizeFx(){const d=window.devicePixelRatio||1;cv.width=innerWidth*d;cv.height=innerHeight*d;cx.setTransform(d,0,0,d,0,0)}
+sizeFx();addEventListener('resize',sizeFx);
+function burst(n,o={}){
+  const x=o.x==null?innerWidth/2:o.x,y=o.y==null?innerHeight*.4:o.y,sp=o.spread||1;
+  for(let i=0;i<n;i++)PS.push({x,y,vx:(Math.random()-.5)*14*sp,vy:-Math.random()*14*sp-3,g:.38,r:Math.random()*5+4,c:COLORS[i%COLORS.length],a:Math.random()*6,va:(Math.random()-.5)*.4,life:80+Math.random()*50,e:o.emoji&&Math.random()<.45?o.emoji:null});
+  if(!raf)raf=requestAnimationFrame(loop);
+}
+function loop(){
+  cx.clearRect(0,0,innerWidth,innerHeight);
+  PS=PS.filter(p=>p.life>0&&p.y<innerHeight+40);
+  PS.forEach(p=>{
+    p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.vx*=.99;p.a+=p.va;p.life--;
+    cx.globalAlpha=Math.min(1,p.life/25);cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);
+    if(p.e){cx.font='24px serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(p.e,0,0)}
+    else{cx.fillStyle=p.c;cx.fillRect(-p.r,-p.r/2,p.r*2,p.r)}
+    cx.restore();
+  });
+  cx.globalAlpha=1;
+  if(PS.length)raf=requestAnimationFrame(loop);else{raf=0;cx.clearRect(0,0,innerWidth,innerHeight)}
+}
+function rain(n,emoji){for(let i=0;i<4;i++)setTimeout(()=>burst(n/4|0,{x:Math.random()*innerWidth,y:-10,spread:.6,emoji}),i*220)}
+
+/* ---------- toast / sheet / celebrations ---------- */
+let toastT=0;
+function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms)}
+function openSheet(html,lock){const w=$('#sheet');w.dataset.lock=lock?'1':'';w.innerHTML='<div class="sheet"><div class="grab"></div>'+html+'</div>';w.classList.add('on')}
+function closeSheet(){const w=$('#sheet');w.classList.remove('on');w.innerHTML=''}
+$('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet'&&!e.target.dataset.lock)closeSheet()});
+let Q=[];
+function celebrate(list){Q.push(...list);if(!$('#celeb').classList.contains('on'))nextCeleb()}
+function nextCeleb(){
+  const el=$('#celeb'),c=Q.shift();
+  if(!c){el.classList.remove('on');el.innerHTML='';return}
+  el.innerHTML=`<div class="cc"><div class="ce">${c.e}</div><div class="ct">${c.t}</div><p>${c.p}</p><button class="btn gold" data-act="celebnext">${Q.length?'Next':'Keep slaying'}</button></div>`;
+  el.classList.add('on');if(c.fx)c.fx();
+}
+function flash(){const f=$('#flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on')}
+
+/* ---------- payment engine ---------- */
+function pay(l,amt,date){
+  const hpB=hp(l),L0=lvl(S.xp);
+  amt=Math.min(r2(amt),l.balance);
+  l.balance=r2(l.balance-amt);l.paid=r2((l.paid||0)+amt);
+  const slain=l.balance<=0.004;
+  if(slain){l.balance=0;l.slain=true;l.slainDate=date}
+  const min=l.minPay||0,extra=min>0?r2(Math.max(0,amt-min)):0;
+  const onTime=slain||min===0||amt>=min-0.005;
+  const p={id:uid(),loanId:l.id,amt,date,crit:extra>=1,extra,xp:0};
+  S.payments.push(p);
+  const st=streak(),mult=1+Math.min(st,12)*0.1;
+  const base=Math.round(amt)+(onTime?50:20)+(p.crit?Math.round(extra):0)+(slain?500:0);
+  p.xp=Math.round(base*mult);S.xp+=p.xp;
+  const L1=lvl(S.xp),s=stats(),nb=[];
+  BADGES.forEach(b=>{if(!S.badges[b.id]&&b.t(s)){S.badges[b.id]=ymd();nb.push(b)}});
+  const hpA=hp(l);
+  const ph=slain?null:[.1,.25,.5,.75].find(t=>hpB>t&&hpA<=t);
+  save();
+  return{p,slain,crit:p.crit,extra,streak:st,mult,lvlUp:L1>L0?L1:0,badges:nb,phase:ph,hpB,hpA,allFree:S.loans.every(x=>x.slain)};
+}
+function undoPay(id){
+  const p=S.payments.find(x=>x.id===id);if(!p)return;
+  const l=S.loans.find(x=>x.id===p.loanId);
+  if(l){l.balance=r2(l.balance+p.amt);l.paid=r2(Math.max(0,(l.paid||0)-p.amt));if(l.slain){l.slain=false;l.slainDate=null;l.lastAccrual=ymd()}}
+  S.xp=Math.max(0,S.xp-p.xp);
+  S.payments=S.payments.filter(x=>x.id!==id);save();
+}
+
+/* ---------- views ---------- */
+function topbar(){
+  const L=lvl(S.xp),st=streak();
+  return `<div class="top"><div class="topin"><div class="av">${S.avatar}</div><div class="who"><div class="nm">${esc(S.name)}</div><div class="sub">Level ${L} · ${title(L)}</div><div class="xpbar"><div class="xpfill" style="width:${pctXP(S.xp).toFixed(1)}%"></div></div></div><div class="pill fire" title="Months in a row">🔥 ${st}</div><button class="pill" data-act="snd" aria-label="Sound">${S.sound!==false?'🔊':'🔇'}</button></div></div>`;
+}
+function nav(){
+  const T=[['battle','⚔️','Battle'],['team','👥','Team'],['plan','📈','Plan'],['trophies','🏆','Trophies'],['settings','⚙️','Settings']];
+  return `<nav><div class="in">${T.map(t=>`<button class="${tab===t[0]?'on':''}" data-act="tab" data-t="${t[0]}"><span class="i">${t[1]}</span>${t[2]}</button>`).join('')}</div></nav>`;
+}
+function chips(){
+  return `<div class="chips">${S.loans.map(l=>`<button class="chip ${l.id===cur().id?'sel':''} ${l.slain?'dead':''}" data-act="sel" data-id="${l.id}"><span>${l.slain?'💀':l.emoji}</span><span class="t">${esc(l.name)}</span></button>`).join('')}<button class="chip add" data-act="addloan">＋ New boss</button></div>`;
+}
+function overall(){
+  const s=stats();
+  return `<div class="card"><div class="row"><div><div class="lab">Total debt left</div><div class="big ${s.bal<=0?'mint':''}">${money0(s.bal)}</div></div><div style="text-align:right"><div class="lab">Wiped out</div><div class="big mint">${money0(s.totalPaid)}</div></div></div><div class="bar"><i style="width:${(s.prog*100).toFixed(1)}%"></i></div><div class="lab" style="margin-top:8px;text-align:center">${(s.prog*100).toFixed(1)}% of your debt is gone</div></div>`;
+}
+function bossCard(l){
+  const f=hp(l),ph=f>.75?1:f>.5?2:f>.25?3:4;
+  const tl=TAUNT[ph-1],tx=l.slain?'You did it. Rest in pieces.':tl[Math.floor(l.balance)%tl.length];
+  const est=l.minPay>0&&!l.slain?sim(l.balance,l.apr,l.minPay):null;
+  const regen=(l.interest||0)>0?`<div class="regen">😈 This boss has healed ${money(l.interest)} from interest. Hit it harder.</div>`:'';
+  return `<div class="card"><button class="edit" data-act="editloan" data-id="${l.id}" aria-label="Edit loan">✏️</button>
+  <div class="stage"><div class="boss ${l.slain?'dead':'p'+ph}">${l.slain?'💀':l.emoji}</div></div>
+  <div class="bname">${esc(l.name)}</div><div class="taunt">${l.slain?'🏆 Defeated '+fmtDate(l.slainDate||ymd()):esc(tx)}</div>
+  <div class="hp"><div class="hpfill" style="width:${(f*100).toFixed(1)}%"></div><div class="hptxt">${l.slain?'0 HP':money(l.balance)+' left'}</div></div>
+  <div class="tri"><div><span class="lab">Monthly hit</span><b>${l.minPay>0?mon(l.minPay):'—'}</b></div><div><span class="lab">Interest</span><b>${l.apr>0?l.apr+'%':'0%'}</b></div><div><span class="lab">Falls in</span><b>${l.slain?'Done':est&&!est.inf?dur(est.m):'—'}</b></div></div>${regen}</div>`;
+}
+function monthQuest(l){
+  if(l.slain)return '';
+  const key=mk(new Date());
+  const paid=r2(sum(S.payments.filter(p=>p.loanId===l.id&&p.date.slice(0,7)===key),p=>p.amt));
+  const min=l.minPay||0,st=streak();
+  let h='<div class="card quest"><h3>📅 This month&rsquo;s quest</h3>';
+  if(min>0){
+    const f=Math.min(1,paid/min);
+    h+=`<div class="row"><span>Pay ${mon(min)} on ${esc(l.name)}</span><b class="${f>=1?'done':''}">${f>=1?'✅ Cleared':mon(paid)+' / '+mon(min)}</b></div><div class="bar gold"><i style="width:${(f*100).toFixed(0)}%"></i></div>`;
+  }else h+=`<div class="row"><span>Paid this month</span><b>${mon(paid)}</b></div><div class="note">Add a monthly payment in ✏️ to unlock the quest bar and critical hits.</div>`;
+  const anyThisMonth=S.payments.some(p=>p.date.slice(0,7)===key);
+  if(st>0&&!anyThisMonth)h+=`<div class="note coin" style="font-size:14px">🔥 Your ${st}-month streak ends if you skip this month. Pay to keep the XP multiplier.</div>`;
+  else if(st>0)h+=`<div class="note" style="font-size:13px">🔥 ${st}-month streak = ${(1+Math.min(st,12)*.1).toFixed(1)}x XP on every hit.</div>`;
+  return h+'</div>';
+}
+function logHTML(n){
+  const list=S.payments.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id)).slice(0,n);
+  if(!list.length)return '<div class="empty">No hits yet. The first one feels great.</div>';
+  return list.map(p=>{const l=S.loans.find(x=>x.id===p.loanId);return `<div class="log"><div class="e">${p.crit?'💥':'⚔️'}</div><div class="m">${esc(l?l.name:'Deleted loan')}<small>${fmtDate(p.date)}${p.crit?' · critical hit':''}</small></div><div><div class="a">${mon(p.amt)}</div><div class="x">+${p.xp} XP</div></div>${n>10?`<button class="mini" data-act="undo" data-id="${p.id}" aria-label="Undo payment">🗑️</button>`:''}</div>`}).join('');
+}
+function battleHTML(){
+  const s=stats();let h=overall();
+  if(s.free)h=`<div class="card vic"><div class="e">🎉</div><div class="big">Debt free!</div><p style="margin:8px 0 0">Every boss is defeated. You paid ${money0(s.totalPaid)} and earned it.</p></div>`+h;
+  const l=cur();
+  h+=chips()+bossCard(l);
+  if(!l.slain)h+=`<button class="attack" data-act="attack" data-id="${l.id}">💥 Attack!</button>`+monthQuest(l);
+  h+=`<div class="card"><h3>Recent hits</h3>${logHTML(4)}</div>`;
+  return h;
+}
+function trophyHTML(){
+  const s=stats(),got=BADGES.filter(b=>S.badges[b.id]).length;
+  return `<div class="card"><h3>Your stats</h3><div class="stats"><div><span class="lab">Total paid</span><b class="mint">${money0(s.totalPaid)}</b></div><div><span class="lab">Payments</span><b>${s.count}</b></div><div><span class="lab">Biggest hit</span><b class="coin">${mon(s.max)}</b></div><div><span class="lab">Bosses slain</span><b>${s.slain} / ${S.loans.length}</b></div></div></div>
+  <div class="card"><h3>Badges ${got} / ${BADGES.length}</h3><div class="badges">${BADGES.map(b=>{const g=S.badges[b.id];return `<div class="bd ${g?'got':'lock'}"><div class="e">${b.e}</div><b>${b.n}</b><small>${g?'Earned '+fmtDate(g):b.d}</small></div>`}).join('')}</div></div>
+  <div class="card"><h3>Battle log</h3>${logHTML(60)}<div class="note">Typed a payment wrong? Tap the trash to undo it. The boss gets its HP back and the XP comes off.</div></div>`;
+}
+function planRes(){
+  const l=cur();
+  if(l.slain)return '<div class="empty">This boss is already dead. Pick another one.</div>';
+  if(!(l.minPay>0))return '<div class="empty">Add a monthly payment to this loan (tap ✏️ on the Battle tab) to see your plan.</div>';
+  const a=sim(l.balance,l.apr,l.minPay),b=sim(l.balance,l.apr,l.minPay+planExtra);
+  if(a.inf&&b.inf)return '<div class="empty">That payment does not even cover the interest. Add more power.</div>';
+  let h=`<div class="vs"><div><span class="lab">Normal pace</span><b>${a.inf?'Never':when(a.m)}</b><span class="lab">${a.inf?'Interest outruns you':dur(a.m)+' · '+money0(a.ti)+' interest'}</span></div><div class="${planExtra>0?'win':''}"><span class="lab">+${money0(planExtra)} per month</span><b>${when(b.m)}</b><span class="lab">${dur(b.m)} · ${money0(b.ti)} interest</span></div></div>`;
+  if(planExtra>0&&!a.inf)h+=`<div class="save">⚡ ${dur(a.m-b.m)} sooner and ${money0(a.ti-b.ti)} less interest</div>`;
+  else if(planExtra>0)h+=`<div class="save">⚡ This power-up makes the boss beatable</div>`;
+  return h;
+}
+function planHTML(){
+  const l=cur();
+  const ends=S.loans.filter(x=>!x.slain&&x.minPay>0).map(x=>sim(x.balance,x.apr,x.minPay));
+  let free='';
+  if(ends.length){free=ends.some(e=>e.inf)?'Some loans never finish at the current payment':when(Math.max(...ends.map(e=>e.m)))}
+  return chips()+`<div class="card"><h3>⚡ Power-up planner</h3><div class="lab">Extra payment every month on ${esc(l.name)}</div><div class="big coin" id="pex" style="text-align:center;margin-top:8px">+${money0(planExtra)}</div><input type="range" id="prange" min="0" max="500" step="5" value="${planExtra}"><div class="qrow" style="justify-content:center"><button class="q" data-act="pq" data-v="0">Reset</button><button class="q" data-act="pq" data-v="25">+$25</button><button class="q" data-act="pq" data-v="50">+$50</button><button class="q" data-act="pq" data-v="100">+$100</button><button class="q" data-act="pq" data-v="250">+$250</button></div></div>
+  <div class="card"><h3>What happens</h3><div id="pres">${planRes()}</div><div class="note">Estimates use monthly compounding and your exact balance. Your loan servicer&rsquo;s numbers may differ a little.</div></div>
+  ${free?`<div class="card"><h3>🏁 Debt-free date at your current pace</h3><div class="big mint" style="text-align:center">${free}</div></div>`:''}`;
+}
+function settingsHTML(){
+  return `<div class="card"><h3>Hero</h3><label style="margin-top:0">Name</label><input type="text" id="s-name" value="${esc(S.name)}" maxlength="24"><label>Avatar</label><div class="pick">${AVATARS.map(a=>`<button class="pk ${a===S.avatar?'sel':''}" data-act="setav" data-e="${a}">${a}</button>`).join('')}</div></div>
+  <div class="card"><h3>Bosses (loans)</h3>${S.loans.map(l=>`<div class="log"><div class="e">${l.slain?'💀':l.emoji}</div><div class="m">${esc(l.name)}<small>${l.slain?'Defeated':money(l.balance)+' left'}</small></div><button class="mini" data-act="editloan" data-id="${l.id}" aria-label="Edit">✏️</button></div>`).join('')}<button class="btn ghost" data-act="addloan">＋ Add another loan</button></div>
+  <div class="card"><h3>Keep your progress safe</h3><div class="note" style="margin-top:0">Everything is saved on this phone only. Back it up now and then, or to move to a new phone.</div><button class="btn ghost" data-act="backup">💾 Back up or restore</button></div>
+  <div class="card"><h3>Danger zone</h3><button class="btn danger" data-act="reset">Erase everything and start over</button></div>`;
+}
+function loanFields(l){
+  l=l||{};formBoss=l.emoji||formBoss||BOSSES[0];
+  return `<label>Loan name</label><input type="text" id="lf-name" value="${esc(l.name||'')}" placeholder="e.g. Federal Direct Loan" maxlength="40">
+  <div class="two"><div><label>Balance now ($)</label><input type="text" inputmode="decimal" id="lf-bal" value="${l.balance!=null?l.balance:''}" placeholder="25000"></div><div><label>Interest rate (%)</label><input type="text" inputmode="decimal" id="lf-apr" value="${l.apr!=null?l.apr:''}" placeholder="5.5"></div></div>
+  <div class="two"><div><label>Monthly payment ($)</label><input type="text" inputmode="decimal" id="lf-min" value="${l.minPay?l.minPay:''}" placeholder="250"></div><div><label>Started at ($, optional)</label><input type="text" inputmode="decimal" id="lf-orig" value="${l.original!=null?l.original:''}" placeholder="same as now"></div></div>
+  <label class="chk"><input type="checkbox" id="lf-track" ${l.track!==false?'checked':''}> Add interest to the balance each day (like a real loan)</label>
+  <label>Choose the boss</label><div class="pick" id="bosspick">${BOSSES.map(e=>`<button type="button" class="pk ${e===formBoss?'sel':''}" data-act="boss" data-e="${e}">${e}</button>`).join('')}</div>`;
+}
+function readLoan(){
+  const bal=r2(num($('#lf-bal').value));
+  return{name:$('#lf-name').value.trim()||'Student loan',bal,apr:num($('#lf-apr').value),min:num($('#lf-min').value),orig:num($('#lf-orig').value),track:$('#lf-track').checked};
+}
+function welcomeHTML(){
+  formBoss=BOSSES[0];formAv=AVATARS[0];
+  return `<div class="wrap welcome"><div class="logo">⚔️</div><h1>Debt Slayer</h1><p>Every student loan is a boss. Every payment is a hit. Earn XP, keep your streak, and take them all down.</p>
+  <div class="card"><h3>Create your hero</h3><label style="margin-top:0">Your name</label><input type="text" id="w-name" placeholder="Name" maxlength="24"><label>Pick an avatar</label><div class="pick" id="avpick">${AVATARS.map(a=>`<button type="button" class="pk ${a===formAv?'sel':''}" data-act="av" data-e="${a}">${a}</button>`).join('')}</div></div>
+  <div class="card"><h3>Your first boss</h3>${loanFields()}<div class="note">Use the balance and rate from your loan servicer&rsquo;s website. You can fix them any time.</div><button class="btn gold" data-act="start">Start the battle</button></div></div>`;
+}
+function render(){
+  const app=$('#app');
+  if(!S){app.innerHTML=welcomeHTML();return}
+  const body=tab==='battle'?battleHTML():tab==='team'?teamHTML():tab==='plan'?planHTML():tab==='trophies'?trophyHTML():settingsHTML();
+  app.innerHTML=topbar()+'<div class="wrap">'+body+'</div>'+nav();
+  if(anim){
+    const f=$('.hpfill');if(f){f.style.width=anim.from+'%';void f.offsetWidth;f.style.width=anim.to+'%'}
+    const x=$('.xpfill');if(x){x.style.width=anim.xf+'%';void x.offsetWidth;x.style.width=pctXP(S.xp)+'%'}
+    anim=null;
+  }
+}
+
+/* ---------- actions ---------- */
+function attackSheet(l){
+  openSheet(`<h2>${l.emoji} Attack ${esc(l.name)}</h2><div class="lab">Boss HP: ${money(l.balance)}</div>
+  <label>How much did you pay?</label><input type="text" inputmode="decimal" id="amt" class="amt" placeholder="$0" value="${l.minPay>0?l.minPay:''}" autocomplete="off">
+  <div class="qrow">${l.minPay>0?'<button class="q" data-q="min">Monthly hit</button>':''}<button class="q" data-q="25">+$25</button><button class="q" data-q="50">+$50</button><button class="q" data-q="100">+$100</button><button class="q" data-q="250">+$250</button><button class="q fin" data-q="all">💀 Finish it</button><button class="q" data-q="clr">Clear</button></div>
+  <label>Payment date</label><input type="date" id="pdate" value="${ymd()}" max="${ymd()}">
+  <div class="prev" id="prev"></div>
+  <button class="btn gold" data-act="doHit" data-id="${l.id}">💥 Land the hit</button>`);
+  updPrev(l);
+}
+function updPrev(l){
+  const el=$('#prev');if(!el)return;
+  let a=num($('#amt').value);
+  if(a<=0){el.textContent='Type what you paid to see the damage.';return}
+  const capped=Math.min(a,l.balance),left=r2(l.balance-capped),min=l.minPay||0,ex=min>0?capped-min:0;
+  let h=capped>=l.balance-0.004?'💀 <b class="hot">Final blow!</b> This boss is toast.':`Boss will have <b>${money(left)}</b> left.`;
+  if(ex>=1)h+=`<br>💥 <b class="coin">Critical hit!</b> ${money(ex)} over the minimum = bonus XP.`;
+  else if(min>0&&capped<min-0.005)h+=`<br>Under the monthly hit, so less XP.`;
+  el.innerHTML=h;
+}
+function doHit(l){
+  const amt=num($('#amt').value);let date=$('#pdate').value||ymd();
+  if(date>ymd())date=ymd();
+  if(amt<=0){toast('Enter an amount first');return}
+  accrue();
+  const L0=lvl(S.xp),xf=pctXP(S.xp),from=hp(l)*100;
+  const res=pay(l,amt,date);
+  closeSheet();S.sel=l.id;save();tab='battle';
+  anim={from,to:hp(l)*100,xf:L0===lvl(S.xp)?xf:0};
+  render();window.scrollTo({top:0});
+  afterHit(res,l);
+}
+function afterHit(res,l){
+  const boss=$('.boss'),amt=res.p.amt;
+  let x=innerWidth/2,y=innerHeight*.35;
+  if(boss){
+    boss.classList.remove('shake');void boss.offsetWidth;boss.classList.add('shake');
+    const r=boss.getBoundingClientRect();x=r.left+r.width/2;y=r.top+r.height/2;
+    const d=document.createElement('div');d.className='dmg'+(res.crit?' crit':'');d.textContent=(res.crit?'CRIT -':'-')+mon(amt);
+    boss.parentElement.appendChild(d);setTimeout(()=>d.remove(),1400);
+  }
+  flash();buzz(res.slain?[60,40,60,40,200]:res.crit?[40,30,80]:30);
+  snd(res.slain?'win':res.crit?'crit':'hit');setTimeout(()=>snd('coin'),260);
+  burst(Math.min(150,25+Math.round(amt/8)),{x,y,emoji:'🪙',spread:res.crit?1.4:1});
+  toast(`-${mon(amt)} · +${res.p.xp} XP${res.mult>1?' · '+res.mult.toFixed(1)+'x streak':''}`);
+  const c=[],nm=esc(l.name);
+  if(res.phase&&PHASE[res.phase]){const P=PHASE[res.phase];c.push({e:P[0],t:P[1],p:`${nm}: ${P[2]}`,fx:()=>{snd('badge');burst(60,{spread:1})}})}
+  if(res.lvlUp)c.push({e:'⬆️',t:'Level '+res.lvlUp+'!',p:`You are now a <b>${title(res.lvlUp)}</b>.`,fx:()=>{snd('level');burst(120);buzz([50,30,50])}});
+  res.badges.forEach(b=>c.push({e:b.e,t:'Badge: '+b.n,p:b.d,fx:()=>{snd('badge');burst(70)}}));
+  if(res.slain)c.push({e:'🏆',t:'Boss defeated!',p:`<b>${nm}</b> is gone. You paid off ${money0(l.original)} of debt${res.allFree?'.<br><br>🎉 <b>Every boss is down. You are debt free!</b>':'. Pick your next target.'}`,fx:()=>{snd('win');rain(220,'🪙');burst(160)}});
+  if(c.length)setTimeout(()=>celebrate(c),1100);
+  shareEvents(res,l);
+}
+function sheetLoan(l){
+  const edit=!!l;
+  openSheet(`<h2>${edit?'Edit boss':'New boss'}</h2>${loanFields(l)}${edit?'<div class="note">Tip: if your loan servicer shows a different balance, fix it here to stay in sync.</div>':''}<button class="btn gold" data-act="saveloan" ${edit?`data-id="${l.id}"`:''}>${edit?'Save changes':'Add boss'}</button>${edit?`<button class="btn danger" data-act="delloan" data-id="${l.id}">Delete this loan</button>`:''}`);
+}
+function saveLoan(id){
+  const f=readLoan();
+  if(!(f.bal>0)&&!id){toast('Enter the current balance');return}
+  if(id){
+    const l=S.loans.find(x=>x.id===id);if(!l)return;
+    l.name=f.name;l.apr=f.apr;l.minPay=f.min;l.track=f.track;l.emoji=formBoss;
+    if(f.bal>0){l.balance=f.bal;if(l.slain){l.slain=false;l.slainDate=null}l.lastAccrual=ymd()}
+    if(f.orig>0)l.original=f.orig;
+    toast('Boss updated');
+  }else{
+    const l={id:uid(),name:f.name,emoji:formBoss,original:Math.max(f.orig,f.bal),balance:f.bal,apr:f.apr,minPay:f.min,track:f.track,lastAccrual:ymd(),paid:0,interest:0,slain:false,slainDate:null};
+    S.loans.push(l);S.sel=l.id;toast('New boss appeared!');
+  }
+  save();closeSheet();render();
+}
+function backupSheet(){
+  openSheet(`<h2>💾 Back up or restore</h2><div class="note" style="margin-top:6px">Copy this text and keep it somewhere safe (notes, email to yourself). To restore, paste a saved backup here and tap Restore.</div><label>Backup text</label><textarea id="bk">${esc(JSON.stringify(S))}</textarea><button class="btn gold" data-act="copybk">Copy backup</button><button class="btn ghost" data-act="restore">Restore from this text</button>`);
+}
+function doRestore(){
+  try{
+    const o=JSON.parse($('#bk').value);
+    if(!o||!Array.isArray(o.loans)||!Array.isArray(o.payments))throw 0;
+    if(!confirm('Replace everything on this phone with this backup?'))return;
+    S=o;S.badges=S.badges||{};S.xp=S.xp||0;save();closeSheet();tab='battle';render();toast('Backup restored');
+  }catch(e){toast('That backup text did not work')}
+}
+
+/* ---------- team play (Supabase) ---------- */
+let syncT=0;
+const okq=async p=>{const r=await p;if(r.error)throw r.error;return r.data};
+function errMsg(e){
+  const m=(e&&e.message)||String(e||'');
+  if(/invalid schema|schema.*exposed/i.test(m))return 'The debt_slayer schema is not exposed yet. In Supabase open Project Settings > API > Exposed schemas and add debt_slayer.';
+  if(/does not exist|could not find the (table|function)|schema cache/i.test(m))return 'The database tables are missing. Run supabase_schema.sql in the Supabase SQL Editor.';
+  if(/invalid login/i.test(m))return 'Wrong email or password.';
+  return m||'Something went wrong';
+}
+const ago=t=>{const m=Math.max(0,Math.round((Date.now()-new Date(t))/6e4));return m<1?'just now':m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago'};
+function initSB(){
+  if(sb||!SUPABASE_URL||!SUPABASE_ANON_KEY||!window.supabase)return;
+  try{
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{db:{schema:'debt_slayer'},auth:{persistSession:true,autoRefreshToken:true,storageKey:'debtslayer.auth'}});
+  }catch(e){sb=null;return}
+  sb.auth.onAuthStateChange((ev,sess)=>{
+    const u=sess?sess.user:null;
+    setTimeout(()=>{
+      if(u){const was=TM.user&&TM.user.id===u.id;TM.user=u;if(!was||ev==='SIGNED_IN')teamLoad(true)}
+      else{unsub();Object.assign(TM,{user:null,party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false,err:''});softRender()}
+    },0);
+  });
+}
+function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(),700)}
+async function syncNow(strict){
+  if(!sb||!TM.user||!S)return;
+  const uid=TM.user.id,s=stats(),share=!!S.share;
+  try{
+    await okq(sb.from('hero').upsert({user_id:uid,name:S.name,avatar:S.avatar,xp:S.xp,level:lvl(S.xp),streak:s.streak,bosses_slain:s.slain,bosses_total:S.loans.length,progress_pct:r2(s.prog*100),total_paid:share?s.totalPaid:null,share_amounts:share}));
+    const rows=S.loans.map(l=>({owner_id:uid,local_id:l.id,name:l.name,emoji:l.emoji,hp_pct:r2(hp(l)*100),slain:!!l.slain,slain_at:l.slain?(l.slainDate||ymd()):null,amount_original:share?l.original:null,amount_left:share?l.balance:null}));
+    if(rows.length){
+      await okq(sb.from('boss').upsert(rows,{onConflict:'owner_id,local_id'}));
+      await okq(sb.from('boss').delete().eq('owner_id',uid).not('local_id','in','('+rows.map(r=>'"'+r.local_id+'"').join(',')+')'));
+    }
+    const b=Object.keys(S.badges||{}).map(id=>({user_id:uid,badge_id:id,earned_on:S.badges[id]}));
+    if(b.length)await okq(sb.from('badge_earned').upsert(b,{onConflict:'user_id,badge_id',ignoreDuplicates:true}));
+  }catch(e){if(strict)throw e}
+}
+async function shareEvents(res,l){
+  if(!sb||!TM.user||!S)return;
+  try{
+    await syncNow(true);
+    const uid=TM.user.id,sh=!!S.share,rows=[];
+    rows.push({user_id:uid,kind:res.slain?'slain':res.crit?'crit':'hit',boss_name:l.name,amount:sh?res.p.amt:null,xp:res.p.xp,detail:null});
+    if(res.lvlUp)rows.push({user_id:uid,kind:'level',boss_name:null,amount:null,xp:null,detail:'Level '+res.lvlUp+' · '+title(res.lvlUp)});
+    res.badges.forEach(b=>rows.push({user_id:uid,kind:'badge',boss_name:null,amount:null,xp:null,detail:b.e+' '+b.n}));
+    await okq(sb.from('feed').insert(rows));
+  }catch(e){}
+}
+async function teamLoad(push){
+  if(!sb||!TM.user||!S||TM.loading)return;
+  TM.loading=true;TM.err='';
+  try{
+    if(push)await syncNow(true);
+    const mem=await okq(sb.from('party_member').select('party_id,user_id'));
+    if(!mem.length){
+      Object.assign(TM,{party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[]});unsub();
+    }else{
+      const [party,heroes,bosses,badges,feed,grave]=await Promise.all([
+        okq(sb.from('party').select('*').eq('id',mem[0].party_id).maybeSingle()),
+        okq(sb.from('party_scoreboard').select('*')),
+        okq(sb.from('boss').select('*')),
+        okq(sb.from('badge_earned').select('*')),
+        okq(sb.from('feed').select('*').order('created_at',{ascending:false}).limit(40)),
+        okq(sb.from('graveyard').select('*').order('slain_at',{ascending:false}))
+      ]);
+      Object.assign(TM,{party,heroes,bosses,badges,feed,grave});sub();
+    }
+    TM.loaded=true;
+  }catch(e){TM.err=errMsg(e)}
+  TM.loading=false;
+  softRender();
+}
+function sub(){
+  if(TM.ch||!sb||!TM.user)return;
+  try{
+    TM.ch=sb.channel('ds-feed').on('postgres_changes',{event:'INSERT',schema:'debt_slayer',table:'feed'},pl=>{
+      const r=(pl&&pl.new)||{};if(!TM.user||r.user_id===TM.user.id)return;
+      announce(r);teamLoad(false);
+    }).subscribe();
+  }catch(e){TM.ch=null}
+}
+function unsub(){try{if(TM.ch&&sb)sb.removeChannel(TM.ch)}catch(e){}TM.ch=null}
+function announce(r){
+  const h=TM.heroes.find(x=>x.user_id===r.user_id),who=h?h.avatar+' '+h.name:'Your teammate';
+  const amt=r.amount!=null?' ('+mon(r.amount)+')':'',bn=r.boss_name||'a boss';let m='';
+  if(r.kind==='slain'){m='💀 '+who+' destroyed '+bn+'!';snd('win');burst(90)}
+  else if(r.kind==='crit'){m='💥 '+who+' crit '+bn+amt;snd('crit')}
+  else if(r.kind==='hit'){m='⚔️ '+who+' hit '+bn+amt;snd('hit')}
+  else if(r.kind==='level'){m='⬆️ '+who+' reached '+(r.detail||'a new level');snd('level')}
+  else if(r.kind==='badge'){m='🏅 '+who+' earned '+(r.detail||'a badge');snd('badge')}
+  if(m)toast(m,4200);
+}
+function softRender(){
+  if(!S||tab!=='team')return;
+  const a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA)$/.test(a.tagName))return;
+  if($('#sheet').classList.contains('on')||$('#celeb').classList.contains('on'))return;
+  const y=window.scrollY;render();window.scrollTo(0,y);
+}
+function wipeShared(){
+  if(!sb||!TM.user)return;
+  unsub();
+  (async()=>{try{await okq(sb.rpc('wipe_my_shared_data'))}catch(e){}})();
+  Object.assign(TM,{party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false});
+}
+function acctHTML(){
+  return `<div class="card"><h3>🔒 Privacy</h3><label class="chk" style="margin-top:0"><input type="checkbox" id="t-share" ${S.share?'checked':''}> Share dollar amounts with my team</label><div class="note">Off: teammates see boss names, HP percentages, levels and badges only. On: they also see balances and payment amounts. Your interest rate and payment history are never shared.</div></div>
+  <div class="card"><div class="note" style="margin-top:0">Signed in as ${esc(TM.user.email||'')}</div><button class="btn ghost" data-act="signout">Sign out</button></div>`;
+}
+const feedText=(f)=>{
+  const bn=esc(f.boss_name||'a boss'),amt=f.amount!=null?' · '+mon(f.amount):'';
+  if(f.kind==='slain')return `destroyed <b>${bn}</b>${amt}`;
+  if(f.kind==='crit')return `landed a critical hit on <b>${bn}</b>${amt}`;
+  if(f.kind==='hit')return `hit <b>${bn}</b>${amt}`;
+  if(f.kind==='level')return `reached <b>${esc(f.detail||'a new level')}</b>`;
+  return `earned <b>${esc(f.detail||'a badge')}</b>`;
+};
+function mateHTML(x,i,me){
+  const rank=i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+  return `<div class="mate ${x.user_id===me?'me':''}"><div class="rank">${rank}</div><div class="av sm">${esc(x.avatar)}</div><div class="mm"><div class="nm">${esc(x.name)}${x.user_id===me?' (you)':''}</div><div class="sub">Level ${x.level} · ${title(x.level)} · ${Number(x.xp).toLocaleString('en-US')} XP</div><div class="bar" style="height:10px;margin-top:6px"><i style="width:${x.progress_pct}%"></i></div><div class="sub" style="margin-top:5px">${x.progress_pct}% wiped · 💀 ${x.bosses_slain}/${x.bosses_total} · 🔥 ${x.streak} · 🏅 ${x.badge_count}${x.share_amounts&&x.total_paid!=null?' · '+money0(x.total_paid)+' paid':''}</div></div></div>`;
+}
+function partyHTML(){
+  const me=TM.user.id,H=TM.heroes.slice().sort((a,b)=>b.xp-a.xp),P=TM.party||{name:'Team',join_code:''};
+  const who=id=>TM.heroes.find(h=>h.user_id===id);
+  let h=`<div class="card"><div class="row"><div><div class="lab">Your team</div><div class="big" style="font-size:22px">${esc(P.name)}</div></div><button class="mini" data-act="teamrefresh" aria-label="Refresh">🔄</button></div><div class="row" style="margin-top:14px"><div><span class="lab">Invite code</span><div class="code">${esc(P.join_code)}</div></div><button class="q" data-act="copycode">Copy</button></div>${H.length<2?'<div class="note">Send this code to your teammate. They sign up, tap Join, and enter it.</div>':''}</div>`;
+  h+=`<div class="card"><h3>🏆 Scoreboard</h3>${H.length?H.map((x,i)=>mateHTML(x,i,me)).join(''):'<div class="empty">Syncing your hero...</div>'}</div>`;
+  const live=TM.bosses.filter(b=>b.owner_id!==me&&!b.slain);
+  if(live.length)h+=`<div class="card"><h3>⚔️ Teammates' battles</h3>${live.map(b=>{const o=who(b.owner_id);return `<div class="log"><div class="e">${esc(b.emoji)}</div><div class="m">${esc(b.name)}<small>${o?esc(o.avatar)+' '+esc(o.name):'Teammate'} · ${b.hp_pct}% HP left${b.amount_left!=null?' · '+money0(b.amount_left)+' to go':''}</small><div class="hpm"><i style="width:${b.hp_pct}%"></i></div></div></div>`}).join('')}</div>`;
+  const has=new Set(TM.badges.map(b=>b.user_id+':'+b.badge_id));
+  const got=(uid,id)=>has.has(uid+':'+id)||(uid===me&&!!S.badges[id]);
+  const rows=BADGES.map(b=>({b,n:H.filter(x=>got(x.user_id,b.id)).length})).sort((a,b)=>b.n-a.n);
+  h+=`<div class="card"><h3>🏅 Achievements</h3><div class="note" style="margin:-4px 0 6px">Lit up means that hero earned it.</div>${rows.map(r=>`<div class="ach ${r.n?'':'lock'}"><div class="e">${r.b.e}</div><div class="am"><b>${r.b.n}</b><small>${r.b.d}</small></div><div class="dots">${H.map(x=>`<span class="dot ${got(x.user_id,r.b.id)?'on':''}" title="${esc(x.name)}">${esc(x.avatar)}</span>`).join('')}</div></div>`).join('')}</div>`;
+  h+=`<div class="card"><h3>🪦 Graveyard</h3>${TM.grave.length?TM.grave.map(g=>`<div class="tomb"><div class="stone"><span>${esc(g.emoji)}</span></div><div class="m"><b>${esc(g.boss_name)}</b><small>Slain by ${esc(g.hero_avatar)} ${esc(g.hero_name)}${g.slain_at?' · '+fmtDate(g.slain_at):''}</small></div>${g.amount_original!=null?`<div class="a">-${money0(g.amount_original)}</div>`:''}</div>`).join(''):'<div class="empty">No graves yet. The first boss to fall rests here.</div>'}</div>`;
+  h+=`<div class="card"><h3>📣 Team activity</h3>${TM.feed.length?TM.feed.slice(0,15).map(f=>{const o=who(f.user_id);return `<div class="log"><div class="e">${o?esc(o.avatar):'🦸'}</div><div class="m">${o?esc(o.name):'A hero'} ${feedText(f)}<small>${ago(f.created_at)}</small></div></div>`}).join(''):'<div class="empty">Nothing yet. Land a hit.</div>'}</div>`;
+  return h;
+}
+function teamHTML(){
+  if(!SUPABASE_URL||!SUPABASE_ANON_KEY)return `<div class="card"><h3>👥 Team play</h3><p style="margin:0 0 8px">Tackle your own bosses, see each other's wins, and share a graveyard. This app is not connected to Supabase yet.</p><div class="note">Run supabase_schema.sql, then paste your project URL and anon key into SUPABASE_URL and SUPABASE_ANON_KEY at the top of the script in index.html.</div></div>`;
+  if(!sb)return `<div class="card"><h3>👥 Team play</h3><div class="empty">Could not load the team service. Check your connection and reload.</div></div>`;
+  if(!TM.user)return `<div class="card"><h3>👥 Team play</h3><p style="margin:0 0 4px">Sign in so your team can see your level, streak, badges and defeated bosses.</p><label>Email</label><input type="email" id="t-email" autocomplete="email" inputmode="email" placeholder="you@email.com"><label>Password</label><input type="password" id="t-pw" autocomplete="current-password" placeholder="6+ characters"><button class="btn gold" data-act="signin">Sign in</button><button class="btn ghost" data-act="signup">Create account</button><div class="note">Teammates never see your interest rate or payment history. Dollar amounts stay private unless you turn sharing on.</div></div>`;
+  const err=TM.err?`<div class="card"><div class="hot">${esc(TM.err)}</div><button class="btn ghost" data-act="teamrefresh">Try again</button></div>`:'';
+  if(!TM.loaded)return (err||'<div class="card"><div class="empty">Loading your team...</div></div>')+(err?acctHTML():'');
+  if(!TM.party)return err+`<div class="card"><h3>Start a team</h3><label style="margin-top:0">Team name</label><input type="text" id="t-pname" maxlength="40" placeholder="Team Debt Slayers"><button class="btn gold" data-act="mkparty">Create team</button></div><div class="card"><h3>Join a team</h3><label style="margin-top:0">Invite code</label><input type="text" id="t-code" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="Code from your teammate"><button class="btn" data-act="joinparty">Join team</button></div>`+acctHTML();
+  return err+partyHTML()+acctHTML()+`<div class="card"><button class="btn danger" style="margin-top:0" data-act="leaveparty">Leave team</button></div>`;
+}
+async function doAuth(kind){
+  const em=($('#t-email').value||'').trim(),pw=$('#t-pw').value||'';
+  if(!em||pw.length<6){toast('Enter your email and a 6+ character password');return}
+  try{
+    if(kind==='signin'){await okq(sb.auth.signInWithPassword({email:em,password:pw}));toast('Signed in')}
+    else{const d=await okq(sb.auth.signUp({email:em,password:pw}));if(d&&d.session)toast('Account created');else toast('Check your email to confirm, then sign in',5000)}
+  }catch(e){toast(errMsg(e),4000)}
+}
+async function mkParty(){
+  try{
+    await okq(sb.rpc('create_party',{p_name:(($('#t-pname').value)||'').trim()||'Our team'}));
+    toast('Team created');await teamLoad(false);
+  }catch(e){toast(errMsg(e),4000)}
+}
+async function joinParty(){
+  const c=(($('#t-code').value)||'').trim();
+  if(!c){toast('Enter the invite code');return}
+  try{await okq(sb.rpc('join_party',{p_code:c}));toast('You joined the team!');snd('level');burst(80);await teamLoad(true)}
+  catch(e){toast(errMsg(e),4000)}
+}
+async function leaveParty(){
+  if(!confirm('Leave this team? Your teammates will no longer see your progress.'))return;
+  try{await okq(sb.rpc('leave_party'));toast('You left the team');await teamLoad(false)}
+  catch(e){toast(errMsg(e),4000)}
+}
+function copyCode(){
+  const c=TM.party&&TM.party.join_code;if(!c)return;
+  try{navigator.clipboard.writeText(c).then(()=>toast('Code copied'),()=>toast('Code: '+c,5000))}catch(e){toast('Code: '+c,5000)}
+}
+async function teamSignOut(){
+  try{await sb.auth.signOut();toast('Signed out')}catch(e){toast(errMsg(e))}
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  actx();
+  const q=e.target.closest('[data-q]');
+  if(q){
+    const l=cur(),inp=$('#amt');if(!inp)return;let v=num(inp.value);const k=q.dataset.q;
+    if(k==='min')v=l.minPay;else if(k==='all')v=l.balance;else if(k==='clr')v=0;else v+=Number(k);
+    inp.value=v>0?String(r2(v)):'';snd('tap');updPrev(l);return;
+  }
+  const t=e.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act,id=t.dataset.id;
+  switch(a){
+    case 'av':formAv=t.dataset.e;document.querySelectorAll('#avpick .pk').forEach(b=>b.classList.toggle('sel',b===t));break;
+    case 'boss':formBoss=t.dataset.e;document.querySelectorAll('#bosspick .pk').forEach(b=>b.classList.toggle('sel',b===t));break;
+    case 'start':{
+      const name=($('#w-name').value||'').trim();
+      const f=readLoan();
+      if(!name){toast('Give your hero a name');return}
+      if(!(f.bal>0)){toast('Enter your loan balance');return}
+      const l={id:uid(),name:f.name,emoji:formBoss,original:Math.max(f.orig,f.bal),balance:f.bal,apr:f.apr,minPay:f.min,track:f.track,lastAccrual:ymd(),paid:0,interest:0,slain:false,slainDate:null};
+      S={v:1,name,avatar:formAv,xp:0,badges:{},payments:[],loans:[l],sel:l.id,sound:true};
+      save();tab='battle';render();snd('level');burst(90);toast('Your quest begins!');break;
+    }
+    case 'tab':tab=t.dataset.t;snd('tap');render();window.scrollTo({top:0});if(tab==='team'&&sb&&TM.user)teamLoad(false);break;
+    case 'sel':S.sel=id;save();render();break;
+    case 'signin':case 'signup':doAuth(a);break;
+    case 'signout':teamSignOut();break;
+    case 'mkparty':mkParty();break;
+    case 'joinparty':joinParty();break;
+    case 'leaveparty':leaveParty();break;
+    case 'copycode':copyCode();break;
+    case 'teamrefresh':teamLoad(false);toast('Refreshing...',1200);break;
+    case 'attack':attackSheet(S.loans.find(l=>l.id===id));break;
+    case 'doHit':doHit(S.loans.find(l=>l.id===id));break;
+    case 'celebnext':snd('tap');nextCeleb();break;
+    case 'editloan':sheetLoan(S.loans.find(l=>l.id===id));break;
+    case 'addloan':formBoss=BOSSES[S.loans.length%BOSSES.length];sheetLoan(null);break;
+    case 'saveloan':saveLoan(id);break;
+    case 'delloan':
+      if(confirm('Delete this loan and all of its payment history?')){
+        S.payments=S.payments.filter(p=>p.loanId!==id);S.loans=S.loans.filter(l=>l.id!==id);
+        if(!S.loans.length){wipeShared();localStorage.removeItem(KEY);S=null;closeSheet();render();break}
+        S.sel=S.loans[0].id;save();closeSheet();render();
+      }break;
+    case 'undo':if(confirm('Undo this payment? The boss heals and the XP comes off.')){undoPay(id);render()}break;
+    case 'snd':S.sound=S.sound===false;save();if(S.sound)snd('coin');render();break;
+    case 'setav':S.avatar=t.dataset.e;save();render();break;
+    case 'pq':planExtra=Number(t.dataset.v);{const r=$('#prange');if(r)r.value=planExtra}updPlan();break;
+    case 'backup':backupSheet();break;
+    case 'copybk':{
+      const ta=$('#bk');ta.select();
+      try{navigator.clipboard.writeText(ta.value).then(()=>toast('Backup copied'),()=>{document.execCommand('copy');toast('Backup copied')})}
+      catch(err){try{document.execCommand('copy');toast('Backup copied')}catch(e2){toast('Select the text and copy it')}}
+      break;
+    }
+    case 'restore':doRestore();break;
+    case 'reset':
+      if(confirm('Erase ALL progress on this phone? This cannot be undone.')&&confirm('Really erase everything?')){
+        wipeShared();localStorage.removeItem(KEY);S=null;tab='battle';render();
+      }break;
+  }
+});
+function updPlan(){
+  const p=$('#pex');if(p)p.textContent='+'+money0(planExtra);
+  const r=$('#pres');if(r)r.innerHTML=planRes();
+}
+document.addEventListener('input',e=>{
+  if(e.target.id==='amt'){const l=cur();updPrev(l)}
+  if(e.target.id==='prange'){planExtra=Number(e.target.value);updPlan()}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='s-name'&&S){S.name=e.target.value.trim()||S.name;save();render()}
+  if(e.target.id==='t-share'&&S){
+    S.share=e.target.checked;save();
+    if(sb&&TM.user)(async()=>{try{if(!S.share)await okq(sb.rpc('hide_my_amounts'));await syncNow(true);teamLoad(false)}catch(err){toast(errMsg(err))}})();
+  }
+});
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&S){const r=accrue();if(r.length&&!$('#sheet').classList.contains('on'))render();if(sb&&TM.user)teamLoad(false)}
+});
+
+/* ---------- home-screen icon + boot ---------- */
+(function icon(){
+  try{
+    const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');
+    const g=x.createLinearGradient(0,0,180,180);g.addColorStop(0,'#5b2ea8');g.addColorStop(1,'#ff5a7a');
+    x.fillStyle=g;x.fillRect(0,0,180,180);x.font='104px serif';x.textAlign='center';x.textBaseline='middle';x.fillText('⚔️',90,98);
+    $('#touchicon').href=c.toDataURL('image/png');
+  }catch(e){}
+})();
+if(S){
+  S.badges=S.badges||{};S.payments=S.payments||[];S.xp=S.xp||0;
+  const r=accrue();render();
+  const t=r2(sum(r));if(t>=0.01)setTimeout(()=>toast('😈 Interest healed your bosses by '+money(t)),600);
+}else render();
+initSB();
+})();
+</script>
+</body>
+</html>
