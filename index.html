@@ -200,6 +200,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .tomb .m{flex:1;min-width:0}
 .tomb .m small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
 .tomb .a{font-family:var(--display);font-size:14px;color:var(--mint)}
+.qr{background:#fff;border-radius:18px;padding:10px;max-width:250px;margin:14px auto 10px}
+.qr svg{display:block;width:100%;height:auto}
 /* overlays */
 .celeb{position:fixed;inset:0;z-index:100;background:#000c;display:none;place-items:center;padding:22px}
 .celeb.on{display:grid}
@@ -238,6 +240,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 <canvas id="fx"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -283,6 +286,7 @@ const when=m=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+m);return
 /* ---------- state ---------- */
 let S=null,tab='battle',anim=null,planExtra=0,formBoss=BOSSES[0],formAv=AVATARS[0];
 let sb=null;
+let authMode='in',inviteCode='';
 const TM={user:null,party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false,loading:false,err:'',ch:null};
 try{S=JSON.parse(localStorage.getItem(KEY))||null}catch(e){S=null}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(sb&&TM.user)syncSoon()};
@@ -555,7 +559,7 @@ function welcomeHTML(){
   formBoss=BOSSES[0];formAv=AVATARS[0];
   return `<div class="wrap welcome"><div class="logo">⚔️</div><h1>Debt Slayer</h1><p>Every student loan is a boss. Every payment is a hit. Earn XP, keep your streak, and take them all down.</p>
   <div class="card"><h3>Create your hero</h3><label style="margin-top:0">Your name</label><input type="text" id="w-name" placeholder="Name" maxlength="24"><label>Pick an avatar</label><div class="pick" id="avpick">${AVATARS.map(a=>`<button type="button" class="pk ${a===formAv?'sel':''}" data-act="av" data-e="${a}">${a}</button>`).join('')}</div></div>
-  <div class="card"><h3>Your first boss</h3>${loanFields()}<div class="note">Use the balance and rate from your loan servicer&rsquo;s website. You can fix them any time.</div><button class="btn gold" data-act="start">Start the battle</button></div></div>`;
+  <div class="card"><h3>Your first boss</h3>${loanFields()}<div class="note">Use the balance and rate from your loan servicer&rsquo;s website. You can fix them any time.</div><button class="btn gold" data-act="start">Start the battle</button></div>${SUPABASE_URL?'<button class="btn ghost" data-act="oldphone">📱 I already play on another phone</button>':''}</div>`;
 }
 function render(){
   const app=$('#app');
@@ -660,26 +664,110 @@ function errMsg(e){
   const m=(e&&e.message)||String(e||'');
   if(/invalid schema|schema.*exposed/i.test(m))return 'The debt_slayer schema is not exposed yet. In Supabase open Project Settings > API > Exposed schemas and add debt_slayer.';
   if(/does not exist|could not find the (table|function)|schema cache/i.test(m))return 'The database tables are missing. Run supabase_schema.sql in the Supabase SQL Editor.';
-  if(/invalid login/i.test(m))return 'Wrong email or password.';
+  if(/anonymous sign-?ins? (are|is) disabled/i.test(m))return 'Turn on "Allow anonymous sign-ins" in Supabase: Authentication > Sign In / Providers.';
+  if(/rate limit|too many/i.test(m))return 'Too many tries. Wait a minute and try again.';
   return m||'Something went wrong';
 }
 const ago=t=>{const m=Math.max(0,Math.round((Date.now()-new Date(t))/6e4));return m<1?'just now':m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago'};
-function initSB(){
+async function initSB(){
   if(sb||!SUPABASE_URL||!SUPABASE_ANON_KEY||!window.supabase)return;
   try{
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{db:{schema:'debt_slayer'},auth:{persistSession:true,autoRefreshToken:true,storageKey:'debtslayer.auth'}});
   }catch(e){sb=null;return}
-  sb.auth.onAuthStateChange((ev,sess)=>{
-    const u=sess?sess.user:null;
-    setTimeout(()=>{
-      if(u){const was=TM.user&&TM.user.id===u.id;TM.user=u;if(!was||ev==='SIGNED_IN')teamLoad(true)}
-      else{unsub();Object.assign(TM,{user:null,party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false,err:''});softRender()}
-    },0);
-  });
+  try{
+    const g=await sb.auth.getSession();
+    if(!g.data.session){const r=await sb.auth.signInAnonymously();if(r.error)throw r.error}
+    const me=await okq(sb.rpc('my_session'));
+    TM.ready=true;
+    if(me&&me.player_id)await setPlayer(me);
+    await handleUrlCode();
+  }catch(e){TM.err=errMsg(e)}
+  TM.ready=true;softRender();
+}
+async function setPlayer(r){
+  try{if(document.activeElement)document.activeElement.blur()}catch(e){}
+  TM.user={id:r.player_id,username:r.username,mustSetPin:!!r.must_set_pin};
+  TM.syncBlocked=false;TM.err='';
+  try{
+    if(S&&S.playerId!==r.player_id){
+      const h=await okq(sb.from('hero').select('xp,level').eq('user_id',r.player_id).maybeSingle());
+      if(h&&h.xp>S.xp)TM.syncBlocked={sx:h.xp,lv:h.level};
+    }
+  }catch(e){}
+  if(S&&!TM.syncBlocked&&S.playerId!==r.player_id){S.playerId=r.player_id;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+  if(r.must_set_pin)pinSheet(true);
+  teamLoad(!TM.syncBlocked);
+  softRender();
+}
+async function handleUrlCode(){
+  try{
+    const u=new URL(location.href),c=u.searchParams.get('code');
+    if(!c)return;
+    u.searchParams.delete('code');
+    history.replaceState(null,'',u.pathname+u.search+u.hash);
+    if(!TM.user)await doRedeem(c);
+  }catch(e){}
+}
+async function doRedeem(code){
+  code=String(code||'').trim();
+  if(!code){toast('Enter the code');return}
+  if(!sb){toast('Team play is not set up in this app');return}
+  try{
+    const r=await okq(sb.rpc('redeem_code',{p_code:code}));
+    if(r.payload){
+      let g=null;try{g=JSON.parse(r.payload)}catch(e){}
+      if(g&&Array.isArray(g.loans)&&Array.isArray(g.payments)&&(!S||confirm('Replace the game on this phone with the one from your other phone?'))){
+        S=g;S.badges=S.badges||{};S.xp=S.xp||0;S.playerId=r.player_id;
+        try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+        accrue();
+      }
+    }
+    closeSheet();await setPlayer(r);render();
+    toast('Welcome back, '+r.username);snd('level');burst(70);
+  }catch(e){toast(errMsg(e),4500)}
+}
+const appUrl=()=>location.origin+location.pathname;
+function qrSvg(text){try{if(!window.qrcode)return '';const q=window.qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag(6,2)}catch(e){return ''}}
+function codeSheet(title,code,url,note){
+  const q=qrSvg(url);
+  openSheet(`<h2>${title}</h2>${q?`<div class="qr">${q}</div>`:''}<div style="text-align:center"><div class="lab">${q?'Or type this code':'Type this code'}</div><div class="code">${esc(code)}</div></div><div class="note">${note}</div><button class="btn gold" data-act="closesheet">Done</button>`);
+}
+async function movePhone(){
+  if(!TM.user)return;
+  try{
+    const code=await okq(sb.rpc('start_transfer',{p_payload:JSON.stringify(S)}));
+    codeSheet('Move to a new phone',code,appUrl()+'?code='+code,'Valid for 10 minutes and works once. Your loans and payments travel with it, then are deleted from the server. On the new phone, open Debt Slayer, tap "I already play on another phone" and type the code. Using the browser instead? Scan the QR with the camera.');
+  }catch(e){toast(errMsg(e),4500)}
+}
+async function resetFor(id,nm){
+  try{
+    const code=await okq(sb.rpc('issue_reset_code',{p_player:id}));
+    codeSheet('Sign-in code for '+esc(nm),code,appUrl()+'?code='+code,'Valid for 1 hour and works once. Give it to '+esc(nm)+'. They open the Team tab, tap "Have a sign-in code?", enter it, and choose a new PIN.');
+  }catch(e){toast(errMsg(e),4500)}
+}
+function inviteQR(){
+  const c=TM.party&&TM.party.join_code;if(!c)return;
+  codeSheet('Invite a teammate',c,appUrl()+'?invite='+encodeURIComponent(c),'They scan this with the camera, or open Debt Slayer, tap Team, then "New here?" and type the code. They pick their own username and PIN.');
+}
+function pinSheet(forced){
+  openSheet(`<h2>${forced?'Choose a new PIN':'Change PIN'}</h2>${forced?'<div class="note" style="margin-top:6px">Your sign-in code worked. Pick a new 4 to 6 digit PIN to finish.</div>':'<label>Current PIN</label><input type="password" id="pin-old" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">'}<label>New PIN (4 to 6 digits)</label><input type="password" id="pin-new" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"><button class="btn gold" data-act="savepin">Save PIN</button>`,forced);
+}
+async function savePin(){
+  const nw=(($('#pin-new').value)||'').trim(),oldEl=$('#pin-old'),old=oldEl?(oldEl.value||'').trim():null;
+  if(!/^\d{4,6}$/.test(nw)){toast('The PIN is 4 to 6 digits');return}
+  try{
+    await okq(sb.rpc('set_pin',{p_new:nw,p_old:old||null}));
+    if(TM.user)TM.user.mustSetPin=false;
+    closeSheet();toast('PIN saved');
+  }catch(e){toast(errMsg(e),4500)}
+}
+function oldPhoneSheet(){
+  if(!sb){toast('Team play is not set up in this app yet');return}
+  openSheet(`<h2>📱 Playing on another phone?</h2><div class="note" style="margin-top:6px">On your old phone open Team, tap Move to a new phone, and type the code it shows here.</div><label>Code</label><input type="text" id="o-code" maxlength="12" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" style="font-family:var(--display);font-size:24px;letter-spacing:3px;text-align:center" placeholder="CODE"><button class="btn gold" data-act="redeemold">Bring my game here</button>`);
 }
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(),700)}
 async function syncNow(strict){
-  if(!sb||!TM.user||!S)return;
+  if(!sb||!TM.user||!S||TM.syncBlocked)return;
   const uid=TM.user.id,s=stats(),share=!!S.share;
   try{
     await okq(sb.from('hero').upsert({user_id:uid,name:S.name,avatar:S.avatar,xp:S.xp,level:lvl(S.xp),streak:s.streak,bosses_slain:s.slain,bosses_total:S.loans.length,progress_pct:r2(s.prog*100),total_paid:share?s.totalPaid:null,share_amounts:share}));
@@ -693,7 +781,7 @@ async function syncNow(strict){
   }catch(e){if(strict)throw e}
 }
 async function shareEvents(res,l){
-  if(!sb||!TM.user||!S)return;
+  if(!sb||!TM.user||!S||TM.syncBlocked)return;
   try{
     await syncNow(true);
     const uid=TM.user.id,sh=!!S.share,rows=[];
@@ -758,11 +846,13 @@ function wipeShared(){
   if(!sb||!TM.user)return;
   unsub();
   (async()=>{try{await okq(sb.rpc('wipe_my_shared_data'))}catch(e){}})();
-  Object.assign(TM,{party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false});
+  Object.assign(TM,{user:null,party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false,syncBlocked:false});
 }
 function acctHTML(){
+  const mates=TM.heroes.filter(h=>h.user_id!==TM.user.id);
   return `<div class="card"><h3>🔒 Privacy</h3><label class="chk" style="margin-top:0"><input type="checkbox" id="t-share" ${S.share?'checked':''}> Share dollar amounts with my team</label><div class="note">Off: teammates see boss names, HP percentages, levels and badges only. On: they also see balances and payment amounts. Your interest rate and payment history are never shared.</div></div>
-  <div class="card"><div class="note" style="margin-top:0">Signed in as ${esc(TM.user.email||'')}</div><button class="btn ghost" data-act="signout">Sign out</button></div>`;
+  <div class="card"><h3>📱 Your account</h3><div class="note" style="margin-top:0">Signed in as <b>${esc(TM.user.username)}</b></div><button class="btn ghost" data-act="movephone">Move to a new phone</button><button class="btn ghost" data-act="pinsheet">Change PIN</button><button class="btn ghost" data-act="signout">Sign out on this phone</button></div>
+  ${mates.length?`<div class="card"><h3>🆘 Help a teammate</h3><div class="note" style="margin:-4px 0 4px">Forgot their PIN? Make a one-time sign-in code for them.</div>${mates.map(x=>`<div class="log"><div class="e">${esc(x.avatar)}</div><div class="m">${esc(x.name)}</div><button class="q" data-act="resetfor" data-id="${x.user_id}" data-nm="${esc(x.name)}">Make code</button></div>`).join('')}</div>`:''}`;
 }
 const feedText=(f)=>{
   const bn=esc(f.boss_name||'a boss'),amt=f.amount!=null?' · '+mon(f.amount):'';
@@ -779,7 +869,7 @@ function mateHTML(x,i,me){
 function partyHTML(){
   const me=TM.user.id,H=TM.heroes.slice().sort((a,b)=>b.xp-a.xp),P=TM.party||{name:'Team',join_code:''};
   const who=id=>TM.heroes.find(h=>h.user_id===id);
-  let h=`<div class="card"><div class="row"><div><div class="lab">Your team</div><div class="big" style="font-size:22px">${esc(P.name)}</div></div><button class="mini" data-act="teamrefresh" aria-label="Refresh">🔄</button></div><div class="row" style="margin-top:14px"><div><span class="lab">Invite code</span><div class="code">${esc(P.join_code)}</div></div><button class="q" data-act="copycode">Copy</button></div>${H.length<2?'<div class="note">Send this code to your teammate. They sign up, tap Join, and enter it.</div>':''}</div>`;
+  let h=`<div class="card"><div class="row"><div><div class="lab">Your team</div><div class="big" style="font-size:22px">${esc(P.name)}</div></div><button class="mini" data-act="teamrefresh" aria-label="Refresh">🔄</button></div><div class="row" style="margin-top:14px"><div><span class="lab">Invite code</span><div class="code">${esc(P.join_code)}</div></div><div class="qrow" style="margin:0"><button class="q" data-act="copycode">Copy code</button><button class="q" data-act="copylink">Copy link</button><button class="q" data-act="qrinvite">QR</button></div></div>${H.length<2?'<div class="note">Send the invite link or QR to your teammate. They pick a username and PIN and they are on your team.</div>':''}</div>`;
   h+=`<div class="card"><h3>🏆 Scoreboard</h3>${H.length?H.map((x,i)=>mateHTML(x,i,me)).join(''):'<div class="empty">Syncing your hero...</div>'}</div>`;
   const live=TM.bosses.filter(b=>b.owner_id!==me&&!b.slain);
   if(live.length)h+=`<div class="card"><h3>⚔️ Teammates' battles</h3>${live.map(b=>{const o=who(b.owner_id);return `<div class="log"><div class="e">${esc(b.emoji)}</div><div class="m">${esc(b.name)}<small>${o?esc(o.avatar)+' '+esc(o.name):'Teammate'} · ${b.hp_pct}% HP left${b.amount_left!=null?' · '+money0(b.amount_left)+' to go':''}</small><div class="hpm"><i style="width:${b.hp_pct}%"></i></div></div></div>`}).join('')}</div>`;
@@ -794,19 +884,40 @@ function partyHTML(){
 function teamHTML(){
   if(!SUPABASE_URL||!SUPABASE_ANON_KEY)return `<div class="card"><h3>👥 Team play</h3><p style="margin:0 0 8px">Tackle your own bosses, see each other's wins, and share a graveyard. This app is not connected to Supabase yet.</p><div class="note">Run supabase_schema.sql, then paste your project URL and anon key into SUPABASE_URL and SUPABASE_ANON_KEY at the top of the script in index.html.</div></div>`;
   if(!sb)return `<div class="card"><h3>👥 Team play</h3><div class="empty">Could not load the team service. Check your connection and reload.</div></div>`;
-  if(!TM.user)return `<div class="card"><h3>👥 Team play</h3><p style="margin:0 0 4px">Sign in so your team can see your level, streak, badges and defeated bosses.</p><label>Email</label><input type="email" id="t-email" autocomplete="email" inputmode="email" placeholder="you@email.com"><label>Password</label><input type="password" id="t-pw" autocomplete="current-password" placeholder="6+ characters"><button class="btn gold" data-act="signin">Sign in</button><button class="btn ghost" data-act="signup">Create account</button><div class="note">Teammates never see your interest rate or payment history. Dollar amounts stay private unless you turn sharing on.</div></div>`;
+  if(!TM.ready)return '<div class="card"><div class="empty">Connecting...</div></div>';
+  if(!TM.user){
+    const eC=TM.err?`<div class="card"><div class="hot">${esc(TM.err)}</div></div>`:'';
+    const pinIn=(id,ac)=>`<input type="password" id="${id}" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="${ac}" placeholder="4 to 6 digits">`;
+    const userIn=`<input type="text" id="t-user" maxlength="20" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="letters and numbers">`;
+    if(authMode==='up')return eC+`<div class="card"><h3>👥 Join the team</h3><label style="margin-top:0">Invite code</label><input type="text" id="t-inv" value="${esc(inviteCode)}" maxlength="40" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="Code from your teammate"><label>Pick a username</label>${userIn}<label>Choose a PIN</label>${pinIn('t-pin','new-password')}<button class="btn gold" data-act="signup">Join the team</button><button class="btn ghost" data-act="setmode" data-m="in">I already have an account</button><div class="note">No email needed. Your teammates never see your interest rate or payment history, and dollar amounts stay private unless you turn sharing on.</div></div>`;
+    if(authMode==='code')return eC+`<div class="card"><h3>🔑 Use a sign-in code</h3><div class="note" style="margin-top:0">New phone, or forgot your PIN? Use the one-time code from your old phone or a teammate. Teammates make it from their Team tab under Help a teammate.</div><label>Code</label><input type="text" id="t-code" maxlength="12" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" style="font-family:var(--display);font-size:24px;letter-spacing:3px;text-align:center" placeholder="CODE"><button class="btn gold" data-act="redeem">Sign in with code</button><button class="btn ghost" data-act="setmode" data-m="in">Back to sign in</button></div>`;
+    return eC+`<div class="card"><h3>👥 Sign in</h3><label style="margin-top:0">Username</label>${userIn}<label>PIN</label>${pinIn('t-pin','current-password')}<button class="btn gold" data-act="signin">Sign in</button><button class="btn ghost" data-act="setmode" data-m="up">New here? Join with an invite code</button><button class="btn ghost" data-act="setmode" data-m="code">Forgot PIN, or on a new phone?</button><div class="note">Five wrong PINs lock the account for 15 minutes.</div></div>`;
+  }
   const err=TM.err?`<div class="card"><div class="hot">${esc(TM.err)}</div><button class="btn ghost" data-act="teamrefresh">Try again</button></div>`:'';
-  if(!TM.loaded)return (err||'<div class="card"><div class="empty">Loading your team...</div></div>')+(err?acctHTML():'');
-  if(!TM.party)return err+`<div class="card"><h3>Start a team</h3><label style="margin-top:0">Team name</label><input type="text" id="t-pname" maxlength="40" placeholder="Team Debt Slayers"><button class="btn gold" data-act="mkparty">Create team</button></div><div class="card"><h3>Join a team</h3><label style="margin-top:0">Invite code</label><input type="text" id="t-code" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="Code from your teammate"><button class="btn" data-act="joinparty">Join team</button></div>`+acctHTML();
-  return err+partyHTML()+acctHTML()+`<div class="card"><button class="btn danger" style="margin-top:0" data-act="leaveparty">Leave team</button></div>`;
+  const blk=TM.syncBlocked?`<div class="card"><div class="coin">⏸️ Syncing is paused</div><div class="note">Your account is at ${Number(TM.syncBlocked.sx).toLocaleString('en-US')} XP (level ${TM.syncBlocked.lv}), more than this phone's game. Sharing now would overwrite that progress. To bring your loans here, use Move to a new phone on your old phone.</div><button class="btn ghost" data-act="syncanyway">Sync this phone anyway</button></div>`:'';
+  if(!TM.loaded)return (err||'<div class="card"><div class="empty">Loading your team...</div></div>')+blk+(err?acctHTML():'');
+  if(!TM.party)return err+blk+`<div class="card"><h3>Start a team</h3><label style="margin-top:0">Team name</label><input type="text" id="t-pname" maxlength="40" placeholder="Team Debt Slayers"><button class="btn gold" data-act="mkparty">Create team</button></div><div class="card"><h3>Join a team</h3><label style="margin-top:0">Invite code</label><input type="text" id="t-code" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="Code from your teammate"><button class="btn" data-act="joinparty">Join team</button></div>`+acctHTML();
+  return err+blk+partyHTML()+acctHTML()+`<div class="card"><button class="btn danger" style="margin-top:0" data-act="leaveparty">Leave team</button></div>`;
 }
+const cleanUser=v=>String(v||'').toLowerCase().replace(/[^a-z0-9_]/g,'');
 async function doAuth(kind){
-  const em=($('#t-email').value||'').trim(),pw=$('#t-pw').value||'';
-  if(!em||pw.length<6){toast('Enter your email and a 6+ character password');return}
+  const un=cleanUser($('#t-user').value),pin=(($('#t-pin').value)||'').trim();
+  if(un.length<3){toast('Username needs 3+ letters or numbers');return}
+  if(!/^\d{4,6}$/.test(pin)){toast('The PIN is 4 to 6 digits');return}
   try{
-    if(kind==='signin'){await okq(sb.auth.signInWithPassword({email:em,password:pw}));toast('Signed in')}
-    else{const d=await okq(sb.auth.signUp({email:em,password:pw}));if(d&&d.session)toast('Account created');else toast('Check your email to confirm, then sign in',5000)}
-  }catch(e){toast(errMsg(e),4000)}
+    if(kind==='signin'){
+      const r=await okq(sb.rpc('sign_in',{p_username:un,p_pin:pin}));
+      if(!r.ok){toast(r.reason==='locked'?'Too many wrong tries. Try again in '+r.minutes+' min.':'Wrong username or PIN',4500);return}
+      await setPlayer(r);toast('Welcome back, '+r.username);
+    }else{
+      const code=(($('#t-inv').value)||'').trim();
+      if(!code){toast('Enter your invite code');return}
+      const team=await okq(sb.rpc('check_invite',{p_code:code}));
+      if(!team){toast('That invite code is not valid, or the team is full',4500);return}
+      const r=await okq(sb.rpc('register',{p_username:un,p_pin:pin,p_invite:code}));
+      inviteCode='';await setPlayer(r);toast('Welcome to '+team+'!',3500);snd('level');burst(80);
+    }
+  }catch(e){toast(errMsg(e),4500)}
 }
 async function mkParty(){
   try{
@@ -825,12 +936,20 @@ async function leaveParty(){
   try{await okq(sb.rpc('leave_party'));toast('You left the team');await teamLoad(false)}
   catch(e){toast(errMsg(e),4000)}
 }
+function copyLink(){
+  const c=TM.party&&TM.party.join_code;if(!c)return;
+  const u=location.origin+location.pathname+'?invite='+encodeURIComponent(c);
+  try{navigator.clipboard.writeText(u).then(()=>toast('Invite link copied'),()=>toast(u,6000))}catch(e){toast(u,6000)}
+}
 function copyCode(){
   const c=TM.party&&TM.party.join_code;if(!c)return;
   try{navigator.clipboard.writeText(c).then(()=>toast('Code copied'),()=>toast('Code: '+c,5000))}catch(e){toast('Code: '+c,5000)}
 }
 async function teamSignOut(){
-  try{await sb.auth.signOut();toast('Signed out')}catch(e){toast(errMsg(e))}
+  try{await okq(sb.rpc('sign_out'))}catch(e){toast(errMsg(e));return}
+  unsub();
+  Object.assign(TM,{user:null,party:null,heroes:[],bosses:[],badges:[],feed:[],grave:[],loaded:false,err:'',syncBlocked:false});
+  authMode='in';toast('Signed out on this phone');render();
 }
 
 /* ---------- events ---------- */
@@ -854,7 +973,7 @@ document.addEventListener('click',e=>{
       if(!(f.bal>0)){toast('Enter your loan balance');return}
       const l={id:uid(),name:f.name,emoji:formBoss,original:Math.max(f.orig,f.bal),balance:f.bal,apr:f.apr,minPay:f.min,track:f.track,lastAccrual:ymd(),paid:0,interest:0,slain:false,slainDate:null};
       S={v:1,name,avatar:formAv,xp:0,badges:{},payments:[],loans:[l],sel:l.id,sound:true};
-      save();tab='battle';render();snd('level');burst(90);toast('Your quest begins!');break;
+      save();tab='battle';render();snd('level');burst(90);toast('Your quest begins!');if(sb&&TM.user)setTimeout(()=>teamLoad(true),50);break;
     }
     case 'tab':tab=t.dataset.t;snd('tap');render();window.scrollTo({top:0});if(tab==='team'&&sb&&TM.user)teamLoad(false);break;
     case 'sel':S.sel=id;save();render();break;
@@ -864,6 +983,20 @@ document.addEventListener('click',e=>{
     case 'joinparty':joinParty();break;
     case 'leaveparty':leaveParty();break;
     case 'copycode':copyCode();break;
+    case 'copylink':copyLink();break;
+    case 'setmode':authMode=t.dataset.m;render();break;
+    case 'redeem':doRedeem($('#t-code').value);break;
+    case 'redeemold':doRedeem($('#o-code').value);break;
+    case 'movephone':movePhone();break;
+    case 'pinsheet':pinSheet(false);break;
+    case 'savepin':savePin();break;
+    case 'resetfor':resetFor(id,t.dataset.nm);break;
+    case 'qrinvite':inviteQR();break;
+    case 'oldphone':oldPhoneSheet();break;
+    case 'closesheet':closeSheet();break;
+    case 'syncanyway':
+      if(confirm('Replace your account progress with this phone\'s game?')){S.playerId=TM.user.id;TM.syncBlocked=false;save();teamLoad(true)}
+      break;
     case 'teamrefresh':teamLoad(false);toast('Refreshing...',1200);break;
     case 'attack':attackSheet(S.loans.find(l=>l.id===id));break;
     case 'doHit':doHit(S.loans.find(l=>l.id===id));break;
@@ -929,6 +1062,10 @@ if(S){
   const t=r2(sum(r));if(t>=0.01)setTimeout(()=>toast('😈 Interest healed your bosses by '+money(t)),600);
 }else render();
 initSB();
+try{
+  const iv=new URLSearchParams(location.search).get('invite');
+  if(iv){inviteCode=iv.trim().toUpperCase();authMode='up';tab='team';if(S)render();else toast('Create your hero first, then open the Team tab to join.',6000)}
+}catch(e){}
 })();
 </script>
 </body>
