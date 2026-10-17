@@ -247,8 +247,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 /* ---------- team play config ----------
    Paste your Supabase project URL and anon (public) key between the quotes.
    Leave both empty to play solo. */
-const SUPABASE_URL='https://sjwarllnehssyphoormc.supabase.co';
-const SUPABASE_ANON_KEY='sb_publishable_eGv0iwOKZ1DP6JixaXZnrQ_vI6nax4S';
+const SUPABASE_URL='';
+const SUPABASE_ANON_KEY='';
 /* ---------- helpers ---------- */
 const $=(s,r=document)=>r.querySelector(s);
 const KEY='debtslayer.v1';
@@ -747,7 +747,7 @@ async function resetFor(id,nm){
 }
 function inviteQR(){
   const c=TM.party&&TM.party.join_code;if(!c)return;
-  codeSheet('Invite a teammate',c,appUrl()+'?invite='+encodeURIComponent(c),'They scan this with the camera, or open Debt Slayer, tap Team, then "New here?" and type the code. They pick their own username and PIN.');
+  codeSheet('Invite a teammate',c,appUrl()+'?invite='+encodeURIComponent(c),'They scan this with the camera, or open Debt Slayer, tap Team, then Create account, and type the code in the friend’s code box. They pick their own username and PIN. If they already have an account, they enter it under "Got a friend’s code?" in their Team tab.');
 }
 function pinSheet(forced){
   openSheet(`<h2>${forced?'Choose a new PIN':'Change PIN'}</h2>${forced?'<div class="note" style="margin-top:6px">Your sign-in code worked. Pick a new 4 to 6 digit PIN to finish.</div>':'<label>Current PIN</label><input type="password" id="pin-old" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">'}<label>New PIN (4 to 6 digits)</label><input type="password" id="pin-new" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"><button class="btn gold" data-act="savepin">Save PIN</button>`,forced);
@@ -869,7 +869,8 @@ function mateHTML(x,i,me){
 function partyHTML(){
   const me=TM.user.id,H=TM.heroes.slice().sort((a,b)=>b.xp-a.xp),P=TM.party||{name:'Team',join_code:''};
   const who=id=>TM.heroes.find(h=>h.user_id===id);
-  let h=`<div class="card"><div class="row"><div><div class="lab">Your team</div><div class="big" style="font-size:22px">${esc(P.name)}</div></div><button class="mini" data-act="teamrefresh" aria-label="Refresh">🔄</button></div><div class="row" style="margin-top:14px"><div><span class="lab">Invite code</span><div class="code">${esc(P.join_code)}</div></div><div class="qrow" style="margin:0"><button class="q" data-act="copycode">Copy code</button><button class="q" data-act="copylink">Copy link</button><button class="q" data-act="qrinvite">QR</button></div></div>${H.length<2?'<div class="note">Send the invite link or QR to your teammate. They pick a username and PIN and they are on your team.</div>':''}</div>`;
+  let h=`<div class="card"><div class="row"><div><div class="lab">Your team</div><div class="big" style="font-size:22px">${esc(P.name)}</div></div><button class="mini" data-act="teamrefresh" aria-label="Refresh">🔄</button></div><div class="row" style="margin-top:14px"><div><span class="lab">Your invite code</span><div class="code">${esc(P.join_code)}</div></div><div class="qrow" style="margin:0"><button class="q" data-act="copycode">Copy code</button><button class="q" data-act="copylink">Copy link</button><button class="q" data-act="qrinvite">QR</button></div></div>${H.length<2?'<div class="note">Share this code, link or QR. Whoever joins with it lands on your team.</div>':''}</div>`;
+  if(H.length<2)h+=`<div class="card"><h3>Got a friend's code?</h3><div class="note" style="margin-top:0">Enter it to join their team instead. You move over, and your own empty team goes away.</div><input type="text" id="t-code" maxlength="40" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="Friend's code" style="margin-top:10px"><button class="btn" data-act="joinparty">Join their team</button></div>`;
   h+=`<div class="card"><h3>🏆 Scoreboard</h3>${H.length?H.map((x,i)=>mateHTML(x,i,me)).join(''):'<div class="empty">Syncing your hero...</div>'}</div>`;
   const live=TM.bosses.filter(b=>b.owner_id!==me&&!b.slain);
   if(live.length)h+=`<div class="card"><h3>⚔️ Teammates' battles</h3>${live.map(b=>{const o=who(b.owner_id);return `<div class="log"><div class="e">${esc(b.emoji)}</div><div class="m">${esc(b.name)}<small>${o?esc(o.avatar)+' '+esc(o.name):'Teammate'} · ${b.hp_pct}% HP left${b.amount_left!=null?' · '+money0(b.amount_left)+' to go':''}</small><div class="hpm"><i style="width:${b.hp_pct}%"></i></div></div></div>`}).join('')}</div>`;
@@ -889,9 +890,9 @@ function teamHTML(){
     const eC=TM.err?`<div class="card"><div class="hot">${esc(TM.err)}</div></div>`:'';
     const pinIn=(id,ac)=>`<input type="password" id="${id}" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="${ac}" placeholder="4 to 6 digits">`;
     const userIn=`<input type="text" id="t-user" maxlength="20" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="letters and numbers">`;
-    if(authMode==='up')return eC+`<div class="card"><h3>👥 Join the team</h3><label style="margin-top:0">Invite code</label><input type="text" id="t-inv" value="${esc(inviteCode)}" maxlength="40" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="Code from your teammate"><label>Pick a username</label>${userIn}<label>Choose a PIN</label>${pinIn('t-pin','new-password')}<button class="btn gold" data-act="signup">Join the team</button><button class="btn ghost" data-act="setmode" data-m="in">I already have an account</button><div class="note">No email needed. Your teammates never see your interest rate or payment history, and dollar amounts stay private unless you turn sharing on.</div></div>`;
+    if(authMode==='up')return eC+`<div class="card"><h3>👥 Create your account</h3><label style="margin-top:0">Pick a username</label>${userIn}<label>Choose a PIN</label>${pinIn('t-pin','new-password')}<label>A friend's code (optional)</label><input type="text" id="t-inv" value="${esc(inviteCode)}" maxlength="40" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="Leave blank if you have none"><button class="btn gold" data-act="signup">Create account</button><button class="btn ghost" data-act="setmode" data-m="in">I already have an account</button><div class="note">Got a code from someone? Enter it to join their team. No code? Skip it. You get your own code to share from the Team tab, and whoever uses it joins you. No email needed. Teammates never see your interest rate or payment history, and dollar amounts stay private unless you turn sharing on.</div></div>`;
     if(authMode==='code')return eC+`<div class="card"><h3>🔑 Use a sign-in code</h3><div class="note" style="margin-top:0">New phone, or forgot your PIN? Use the one-time code from your old phone or a teammate. Teammates make it from their Team tab under Help a teammate.</div><label>Code</label><input type="text" id="t-code" maxlength="12" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" style="font-family:var(--display);font-size:24px;letter-spacing:3px;text-align:center" placeholder="CODE"><button class="btn gold" data-act="redeem">Sign in with code</button><button class="btn ghost" data-act="setmode" data-m="in">Back to sign in</button></div>`;
-    return eC+`<div class="card"><h3>👥 Sign in</h3><label style="margin-top:0">Username</label>${userIn}<label>PIN</label>${pinIn('t-pin','current-password')}<button class="btn gold" data-act="signin">Sign in</button><button class="btn ghost" data-act="setmode" data-m="up">New here? Join with an invite code</button><button class="btn ghost" data-act="setmode" data-m="code">Forgot PIN, or on a new phone?</button><div class="note">Five wrong PINs lock the account for 15 minutes.</div></div>`;
+    return eC+`<div class="card"><h3>👥 Sign in</h3><label style="margin-top:0">Username</label>${userIn}<label>PIN</label>${pinIn('t-pin','current-password')}<button class="btn gold" data-act="signin">Sign in</button><button class="btn ghost" data-act="setmode" data-m="up">New here? Create an account</button><button class="btn ghost" data-act="setmode" data-m="code">Forgot PIN, or on a new phone?</button><div class="note">Five wrong PINs lock the account for 15 minutes.</div></div>`;
   }
   const err=TM.err?`<div class="card"><div class="hot">${esc(TM.err)}</div><button class="btn ghost" data-act="teamrefresh">Try again</button></div>`:'';
   const blk=TM.syncBlocked?`<div class="card"><div class="coin">⏸️ Syncing is paused</div><div class="note">Your account is at ${Number(TM.syncBlocked.sx).toLocaleString('en-US')} XP (level ${TM.syncBlocked.lv}), more than this phone's game. Sharing now would overwrite that progress. To bring your loans here, use Move to a new phone on your old phone.</div><button class="btn ghost" data-act="syncanyway">Sync this phone anyway</button></div>`:'';
@@ -911,11 +912,12 @@ async function doAuth(kind){
       await setPlayer(r);toast('Welcome back, '+r.username);
     }else{
       const code=(($('#t-inv').value)||'').trim();
-      if(!code){toast('Enter your invite code');return}
-      const team=await okq(sb.rpc('check_invite',{p_code:code}));
-      if(!team){toast('That invite code is not valid, or the team is full',4500);return}
-      const r=await okq(sb.rpc('register',{p_username:un,p_pin:pin,p_invite:code}));
-      inviteCode='';await setPlayer(r);toast('Welcome to '+team+'!',3500);snd('level');burst(80);
+      if(code){
+        const team=await okq(sb.rpc('check_invite',{p_code:code}));
+        if(!team){toast('That code is not valid, or the team is full',4500);return}
+      }
+      const r=await okq(sb.rpc('register',{p_username:un,p_pin:pin,p_invite:code||null}));
+      inviteCode='';await setPlayer(r);toast(code?'Welcome to the team!':'Account created. Your code is in the Team tab.',4000);snd('level');burst(80);
     }
   }catch(e){toast(errMsg(e),4500)}
 }
